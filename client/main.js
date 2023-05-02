@@ -2,29 +2,11 @@
 import scryptoLogo from './scryptoLogo.png'
 import { 
   RadixDappToolkit, 
-  // ManifestBuilder,
-  Decimal,
-  Bucket,
-  Expression,
-  Address,
-  ongoingAccounts
  } from "@radixdlt/radix-dapp-toolkit";
 import { 
-  RadixEngineToolkit,
   NetworkId,
-  NotarizedTransaction,
-  PublicKey,
-  PrivateKey,
-  Signature,
-  SignatureWithPublicKey, 
   ManifestBuilder, 
   ManifestAstValue, 
-  ManifestSborValue, 
-  TransactionBuilder, 
-  TransactionHeader,
-  TransactionManifest,
-  ValidationConfig,
-  generateRandomNonce,
   InstructionList, 
 } from '@radixdlt/radix-engine-toolkit'
 
@@ -72,7 +54,7 @@ const rdt = RadixDappToolkit(
       console.log("onInit accounts: ", accounts)
       if (accounts.length > 0) {
         document.getElementById('accountName').innerText = accounts[0].label
-        document.getElementById('accountAddress').innerText = accounts[0].address
+        document.getElementById('accountAddress').innerText = truncateMiddle(accounts[0].address)
         accountAddress = accounts[0].address
       }
     },
@@ -99,26 +81,32 @@ let poolunitsAddress
 
 
 document.getElementById('createToken').onclick = async function () {
-  
+  let tokenName = document.getElementById("tokenName").value;
+
   let manifest = new ManifestBuilder()
   .createFungibleResourceWithInitialSupply(
     new ManifestAstValue.U8(18),
     new ManifestAstValue.Map(
       ManifestAstValue.Kind.String,
       ManifestAstValue.Kind.String,
-      []
+      [
+        new ManifestAstValue.String("name"),
+        new ManifestAstValue.String(tokenName)
+      ], 
     ),
     new ManifestAstValue.Map(
       ManifestAstValue.Kind.Enum,
       ManifestAstValue.Kind.Tuple,
       []
     ),
-    new ManifestAstValue.Decimal(1000)
+    new ManifestAstValue.Decimal(10000)
   )
   .callMethod(accountAddress, "deposit_batch", [
     ManifestAstValue.Expression.entireWorktop()
   ])
   .build();
+
+  console.log(manifest)
 
 let converted_manifest = await manifest.convert(
   InstructionList.Kind.String,
@@ -145,91 +133,11 @@ console.log("Intantiate WalletSDK Result: ", result.value)
 }
 
 
-window.onload = async function fetchData() {
-  var fungibles = [];
 
-  let accountState = await stateApi.stateEntityDetails({
-    stateEntityDetailsRequest: {
-      addresses: [accountAddress]
-    }
-  })
-  
-  accountState.items[0].fungible_resources?.items.forEach(item => fungibles.push(item))
 
-  const fungibles_string = [];
 
-  let i = 0;
 
-  while (i < fungibles.length) {
-    let fungible_string = fungibles[i].resource_address;
-    fungibles_string.push(fungible_string);
-    i++;
-  }
 
-  var select = document.createElement("select");
-
-  var selectTokenA = document.getElementById("selectTokenA");
-  var selectTokenB = document.getElementById("selectTokenB");
-
-  for (const val of fungibles_string)
-  {
-      var option = document.createElement("option");
-      option.value = val;
-      option.text = val.charAt(0).toUpperCase() + val.slice(1);
-      select.appendChild(option);
-      selectTokenA.appendChild(option.cloneNode(true));
-      selectTokenB.appendChild(option.cloneNode(true));
-  }
-
-}
-
-// Retrieves TokenPair
-async function loadTokenPair() {
-
-  let tokenPair = [];
-
-  tokenPair.push(tokenAAddress);
-  tokenPair.push(tokenBAddress);
-  
-  var select = document.createElement("select");
-
-  var swapDropDown = document.getElementById("swapDropDown");
-  var exactSwapDropDown = document.getElementById("exactSwapDropDown");
-  
-  for (const val of tokenPair)
-  {
-      var option = document.createElement("option");
-      option.value = val;
-      option.text = val.charAt(0) + val.slice(1);
-      select.appendChild(option);
-      swapDropDown.appendChild(option.cloneNode(true));
-      exactSwapDropDown.appendChild(option.cloneNode(true));
-  }
-
-  document.getElementById("tokenAAddress").innerText = tokenAAddress;
-  document.getElementById("tokenBAddress").innerText = tokenBAddress;
-  
-}
-
-async function loadPoolInformation() {
-  document.getElementById("tokenPair").innerText = tokenAAddress + "/" + tokenBAddress;
-
-  let tokenARequest = await stateApi.entityFungibleResourceVaultPage({
-    stateEntityFungibleResourceVaultsPageRequest: {
-      address: componentAddress,
-      resource_address: tokenAAddress,
-    }
-  })
-
-  let tokenBRequest = await stateApi.entityFungibleResourceVaultPage({
-    stateEntityFungibleResourceVaultsPageRequest: {
-      address: componentAddress,
-      resource_address: tokenBAddress,
-    }
-  })
-
-  document.getElementById("liquidity").innerText = tokenARequest.items[0].amount + "/" + tokenBRequest.items[0].amount;
-}
 
 // ************ Instantiate component and fetch component and resource addresses *************
 document.getElementById('instantiateComponent').onclick = async function () {
@@ -590,4 +498,141 @@ document.getElementById('addLiquidity').onclick = async function () {
     console.log("Exact Swap sendTransaction Result: ", result)
 
     loadPoolInformation();
+}
+
+
+// ****** EXTRA ******
+window.onload = async function fetchData() {
+  var fungibles = [];
+
+  // Getway Request //
+  let accountState = await stateApi.stateEntityDetails({
+    stateEntityDetailsRequest: {
+      addresses: [accountAddress]
+    }
+  })
+  
+  accountState.items[0].fungible_resources?.items.forEach(item => fungibles.push(item))
+  //
+
+  const fungibles_metadata = [];
+  
+
+  let i = 0;
+
+  while (i < fungibles.length) {
+
+    let fungible_object = {};
+
+    let fungible_string = fungibles[i].resource_address;
+
+    try {
+      let metadata = await stateApi.entityMetadataPage({
+        stateEntityMetadataPageRequest: {
+          address: fungible_string
+        }
+      })
+
+      if (metadata.items[1]) {
+
+        let metadataValue = metadata.items[1].value.as_string;
+
+        fungible_object.metadata = metadataValue;
+
+      } else {
+        fungible_object.metadata = "N/A";
+      }
+      fungible_object.resource_address = fungible_string;
+    } catch (error) {
+      console.log(`Error retrieving metadata for ${fungible_string}: ${error}`);
+
+      fungible_object.metadata = "N/A";
+      fungible_object.resource_address = fungibles[i].resource_address;
+    }
+    fungibles_metadata.push(fungible_object);
+    i++;
+  }
+  
+  var select = document.createElement("select");
+
+  var selectTokenA = document.getElementById("selectTokenA");
+  var selectTokenB = document.getElementById("selectTokenB");
+
+  // for (let i = 0; i < fungibles.length; i++)
+  for (const val of fungibles_metadata)
+  {
+      var option = document.createElement("option");
+      // option.value = fungibles[i].resource_address;
+      option.value = val.resource_address;
+      option.text =  val.metadata + " - " + truncateMiddle(val.resource_address);
+      select.appendChild(option);
+      selectTokenA.appendChild(option.cloneNode(true));
+      selectTokenB.appendChild(option.cloneNode(true));
+  }
+}
+
+function truncateMiddle(str) {
+  if (str.length <= 10) {
+    return str;
+  }
+
+  const ellipsis = "...";
+  const charsToShow = 18 - ellipsis.length;
+  const frontChars = Math.ceil(charsToShow / 2);
+  const backChars = Math.floor(charsToShow / 2);
+
+  const truncatedStr = str.substr(0, frontChars) + ellipsis + str.substr(str.length - backChars);
+  return truncatedStr;
+}
+
+
+async function loadPoolInformation() {
+  document.getElementById("tokenPair").innerText = tokenAAddress + "/" + tokenBAddress;
+
+  let tokenARequest = await stateApi.entityFungibleResourceVaultPage({
+    stateEntityFungibleResourceVaultsPageRequest: {
+      address: componentAddress,
+      resource_address: tokenAAddress,
+    }
+  })
+
+  let tokenBRequest = await stateApi.entityFungibleResourceVaultPage({
+    stateEntityFungibleResourceVaultsPageRequest: {
+      address: componentAddress,
+      resource_address: tokenBAddress,
+    }
+  })
+
+  document.getElementById("liquidity").innerText = 
+    truncateMiddle(tokenARequest.items[0].amount) + 
+    "/" + 
+    truncateMiddle(tokenBRequest.items[0].amount);
+}
+
+// Retrieves TokenPair
+async function loadTokenPair() {
+
+  let tokenPair = [];
+
+  tokenPair.push(tokenAAddress);
+  tokenPair.push(tokenBAddress);
+  
+  var select = document.createElement("select");
+
+  var swapDropDown = document.getElementById("swapDropDown");
+  var exactSwapDropDown = document.getElementById("exactSwapDropDown");
+  
+  for (const val of tokenPair)
+  {
+      var option = document.createElement("option");
+      option.value = val;
+      option.text = val.charAt(0) + val.slice(1);
+      select.appendChild(option);
+      swapDropDown.appendChild(option.cloneNode(true));
+      exactSwapDropDown.appendChild(option.cloneNode(true));
+  }
+
+  document.getElementById("tokenAAddress").innerText = tokenAAddress;
+  document.getElementById("tokenBAddress").innerText = tokenBAddress;
+  
 }
