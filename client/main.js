@@ -588,4 +588,6 @@ document.getElementById('addLiquidity').onclick = async function () {
     if (result.isErr()) throw result.error
   
     console.log("Exact Swap sendTransaction Result: ", result)
+
+    loadPoolInformation();
 }
