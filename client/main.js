@@ -166,8 +166,6 @@ window.onload = async function fetchData() {
     i++;
   }
 
-  console.log("Array of Fungibles in a String: ", fungibles_string)
-
   var select = document.createElement("select");
 
   var selectTokenA = document.getElementById("selectTokenA");
@@ -186,7 +184,7 @@ window.onload = async function fetchData() {
 }
 
 // Retrieves TokenPair
-async function loadTokenPair(tokenAAddress, tokenBAddress) {
+async function loadTokenPair() {
 
   let tokenPair = [];
 
@@ -207,6 +205,9 @@ async function loadTokenPair(tokenAAddress, tokenBAddress) {
       swapDropDown.appendChild(option.cloneNode(true));
       exactSwapDropDown.appendChild(option.cloneNode(true));
   }
+
+  document.getElementById("tokenAAddress").innerText = tokenAAddress;
+  document.getElementById("tokenBAddress").innerText = tokenBAddress;
   
 }
 
@@ -332,7 +333,7 @@ document.getElementById('instantiateComponent').onclick = async function () {
   poolunitsAddress = commitReceipt.details.referenced_global_entities[1]
   document.getElementById('poolunitsAddress').innerText = poolunitsAddress;
 
-  loadTokenPair(tokenAAddress, tokenBAddress);
+  loadTokenPair();
   loadPoolInformation();
 }
 
@@ -517,4 +518,74 @@ document.getElementById('exactSwapToken').onclick = async function () {
   document.getElementById('exactReceipt').innerText = JSON.stringify(commitReceipt.details.receipt, null, 2);
 
   loadPoolInformation();
+}
+
+
+document.getElementById('addLiquidity').onclick = async function () {
+  let tokenAAmount = document.getElementById("tokenAAmount").value;
+  console.log(tokenAAmount)
+  let tokenBAmount = document.getElementById("tokenBAmount").value;
+  console.log(tokenBAmount)
+
+  let manifest = new ManifestBuilder()
+    .callMethod(
+      accountAddress,
+      "withdraw",
+      [
+        new ManifestAstValue.Address(tokenAAddress),
+        new ManifestAstValue.Decimal(tokenAAmount)
+      ]
+    )
+    .callMethod(
+      accountAddress,
+      "withdraw",
+      [
+        new ManifestAstValue.Address(tokenBAddress),
+        new ManifestAstValue.Decimal(tokenBAmount)
+      ]
+    )
+    .takeFromWorktop(
+      tokenAAddress,
+      (builder, tokenABucket) =>
+      builder.takeFromWorktop(
+        tokenBAddress,
+        (builder, tokenBBucket) =>
+        builder.callMethod(
+          componentAddress,
+          "add_liquidity",
+          [
+            tokenABucket,
+            tokenBBucket
+          ]
+        )
+      )
+    )
+    .callMethod(
+      accountAddress,
+      "deposit_batch",
+      [
+        ManifestAstValue.Expression.entireWorktop()
+      ]
+    )
+    .build();
+
+    let converted_manifest = await manifest.convert(
+      InstructionList.Kind.String,
+      NetworkId.RCnetV1
+    )
+
+    let string_converted_manifest = converted_manifest.instructions.value;
+  
+    console.log("Create Token Manifest: ", string_converted_manifest)
+  
+    // Send manifest to extension for signing
+    const result = await rdt
+      .sendTransaction({
+        transactionManifest: string_converted_manifest,
+        version: 1,
+      })
+  
+    if (result.isErr()) throw result.error
+  
+    console.log("Exact Swap sendTransaction Result: ", result)
 }
