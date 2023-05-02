@@ -213,6 +213,7 @@ mod radiswap_module {
         pub fn get_token_pair_metadata(&self) -> (String, String) {
             let resource_manager_a = borrow_resource_manager!(self.vault_a.resource_address());
             let metadata_a = resource_manager_a.metadata();
+            
             let token_a_name = metadata_a.get_string("name").unwrap_or_else(|_| "unknown".to_string());
         
             let resource_manager_b = borrow_resource_manager!(self.vault_b.resource_address());

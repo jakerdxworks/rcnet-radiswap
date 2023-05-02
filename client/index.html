@@ -52,7 +52,7 @@
 
 <h2>Swap</h2>
 <div><select id="swapDropDown"></select></div>
-<input type="text" placeholder="Amount" id="amount" />
+<input type="text" placeholder="Amount" id="inputAmount" />
 <p><button id="swapToken">Swap Tokens</button></p>
 <div class="container">
   <p>Receipt:<br>
@@ -62,10 +62,12 @@
 
 <h2>Exact Swap</h2>
 <div><select id="exactSwapDropDown"></select></div>
-<div><input type="text" placeholder="Requested Amount" id="outputAmount" /></div>
+<div><input type="text" placeholder="Requested Amount" id="requestedAmount" /></div>
 <button id="getAmount">Get Required Amount</button>
 <div class="container">
-  <p>Required Amount:<br>
+  <p>Required Resource:<br>
+  <pre id="requiredResource"></pre>
+    Required Amount:<br>
   <pre id="requiredAmount"></pre>
   </p>
 </div>

@@ -1,0 +1,3 @@
+cargo:rerun-if-changed=build/main.rs
+cargo:rustc-env=TYPENUM_BUILD_CONSTS=/Users/jakemai/Documents/GitHub/rcnet-radiswap/scrypto/target/release/build/typenum-9ec8f4f665741d9f/out/consts.rs
+cargo:rustc-env=TYPENUM_BUILD_OP=/Users/jakemai/Documents/GitHub/rcnet-radiswap/scrypto/target/release/build/typenum-9ec8f4f665741d9f/out/op.rs

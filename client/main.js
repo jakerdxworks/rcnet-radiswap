@@ -243,7 +243,6 @@ console.log("Intantiate WalletSDK Result: ", result.value)
 // }
 
 
-
 window.onload = async function fetchData() {
   var fungibles = [];
 
@@ -363,13 +362,6 @@ document.getElementById('instantiateComponent').onclick = async function () {
   // let tokenBAmount = document.getElementById("amountB").value;
   // let swapFee = document.getElementById("swapFee").value;
 
-  console.log("Package Address - Instantiate: ", packageAddress)
-  console.log("Token A - Instantiate: ", tokenAAddress)
-  console.log("Token B - Instantiate: ", tokenBAddress)
-  console.log("Token A Amount - Instantiate: ", tokenAAmount)
-  console.log("Token B Amount - Instantiate: ", tokenBAmount)
-  console.log("Swap Fee - Instantiate: ", swapFee)
-
   let manifest = new ManifestBuilder()
     .callMethod(
       accountAddress,
@@ -468,40 +460,40 @@ document.getElementById('instantiateComponent').onclick = async function () {
 
 
 
-
-
 document.getElementById('swapToken').onclick = async function () {
-  let tokenAddress = document.getElementById("tokenResource").value;
-  let amount = document.getElementById("amount").value;
+  let inputToken = document.getElementById("swapDropDown").value;
+  let inputAmount = document.getElementById("inputAmount").value;
 
   let manifest = new ManifestBuilder()
-  .callMethod(
-    accountAddress,
-    "withdraw",
-    [
-      new ManifestAstValue.Address(
-        tokenAAddress
-      ),
-      new ManifestAstValue.Decimal(amount),
-    ]
-  )
-  .takeFromWorktop(
-    tokenAAddress,
-    (builder, token_bucket) => 
-    builder.callMethod(
-      componentAddress,
-      "swap",
+    .callMethod(
+      accountAddress,
+      "withdraw",
       [
-        new ManifestAstValue.Bucket(token_bucket)
+        new ManifestAstValue.Address(inputToken),
+        new ManifestAstValue.Decimal(inputAmount),
       ]
     )
-  )
-  .callMethod(
-    accountAddress,
-    "deposit_batch",
-    new ManifestAstValue.Expression.entireWorktop()
-  )
-  .build()
+    .takeFromWorktop(
+      inputToken,
+      (builder, inputBucket) => 
+      builder.callMethod(
+        componentAddress,
+        "swap",
+        [
+          inputBucket
+        ]
+      )
+    )
+    .callMethod(
+      accountAddress,
+      "deposit_batch",
+      [
+        ManifestAstValue.Expression.entireWorktop()
+      ]
+    )
+    .build();
+
+  console.log(manifest)
 
   let converted_manifest = await manifest.convert(
     InstructionList.Kind.String,
@@ -525,119 +517,124 @@ document.getElementById('swapToken').onclick = async function () {
   
 }
 
-document.getElementById('getAmount').onchange = async function () {
-  let inputToken = document.getElementById("tokenPairDropDown").value;
-  let outputAmount = document.getElementById("outputAmount").value;
+document.getElementById('getAmount').onclick = async function () {
+  let requestedToken = document.getElementById("exactSwapDropDown").value;
+  let requestedAmount = document.getElementById("requestedAmount").value;
+
+  console.log(requestedAmount)
+
+    // Sorting logic
+    let inputTokenAddress, outputTokenAddress;
+    if (requestedToken === tokenAAddress ) {
+      inputTokenAddress = tokenBAddress; 
+      outputTokenAddress = tokenAAddress;
+    } else {
+      inputTokenAddress = tokenAAddress;
+      outputTokenAddress = tokenBAddress; 
+    };
 
   // Making request to gateway
-  let tokenArequest = await stateApi.entityFungibleResourceVaultPage(
+  let inputTokenRequest = await stateApi.entityFungibleResourceVaultPage(
     {
       stateEntityFungibleResourceVaultsPageRequest: {
         address: componentAddress,
-        resource_address: tokenAAddress,
+        resource_address: inputTokenAddress,
       }
     });
   
-  console.log("Token A Request: ", tokenArequest);
+  console.log("Token A Request: ", inputTokenRequest);
 
-  let tokenBrequest = await stateApi.entityFungibleResourceVaultPage(
+  let outputTokenRequest = await stateApi.entityFungibleResourceVaultPage(
     {
       stateEntityFungibleResourceVaultsPageRequest: {
         address: componentAddress,
-        resource_address: tokenBAddress,
+        resource_address: outputTokenAddress,
       }
     });
 
-  console.log("Token B Request: ", tokenBrequest);
-
-  let componentStateRequest = await stateApi.stateEntityDetails(
-    {
-      stateEntityDetailsRequest: {
-        addresses: [componentAddress]
-      }
-    }
-  )
-
-  console.log("Component Request: ", componentStateRequest);
-
-  let component_data = componentStateRequest.items[0].details;
-  
-  console.log("Component Details: ", component_data);
-
-
-  // Sorting logic
-  let inputTokenReserves, outputTokenReserves;
-  if (inputToken === tokenArequest.address ) {
-    inputTokenReserves = tokenArequest.items[0].amount; 
-    outputTokenReserves = tokenBrequest.items[0].amount;
-  } else {
-    inputTokenReserves = tokenBrequest.items[0].amount;
-    outputTokenReserves = tokenArequest.items[0].amount; 
-  };
+  console.log("Token B Request: ", outputTokenRequest);
 
   // Retrieiving pool liquidity
   // let token_a_amount = tokenArequest.items[0].amount;
-  // let token_b_amount = tokenBrequest.items[0].amount;
+  // let token_b_amount = outputTokenRequest.items[0].amount;
 
-  let x = inputTokenReserves;
-  let y = outputTokenReserves;
+  let x = inputTokenRequest.items[0].amount;
+  let y = outputTokenRequest.items[0].amount;
   // let x = self.vaults[&self.other_resource_address(output_resource_address)].amount();
   // let y = self.vaults[&output_resource_address].amount();
-  let dy = outputAmount;
+  let dy = requestedAmount;
   
-  let r = (100 - swapFee) / 100;
+  let r = (1 - swapFee) / 1;
 
   let dx = (dy * x) / (r * (y - dy));
 
-  document.getElementById('requiredAmount').innerText = dx;
+  document.getElementById('requiredResource').innerText = inputTokenAddress
+  document.getElementById('requiredAmount').innerText = dx 
 }
 
 document.getElementById('exactSwapToken').onclick = async function () {
-  let requestedAmount = document.getElementById("outputAmount");
+  let requiredResource = document.getElementById('requiredResource');
+  let requiredAmount = document.getElementById("requiredAmount").innerHTML;
+  let requestedResource = document.getElementById("exactSwapDropDown").value;
+  let requestedAmount = document.getElementById("requestedAmount").value;
+
+  console.log(requestedResource)
+  console.log(requestedAmount)
+  
+
+  // let requestedAmountNum = parseInt(requestedAmount);
+
+  // Sorting logic
+  let inputTokenAddress, outputTokenAddress;
+  if (requiredResource === tokenAAddress ) {
+    inputTokenAddress = tokenBAddress; 
+    outputTokenAddress = tokenAAddress;
+  } else {
+    inputTokenAddress = tokenAAddress;
+    outputTokenAddress = tokenBAddress; 
+  };
 
   let manifest = new ManifestBuilder()
   .callMethod(
     accountAddress,
     "withdraw",
     [
-      new ManifestAstValue.Address(
-        inputToken
-      ),
-      new ManifestAstValue.Decimal(dx),
+      new ManifestAstValue.Address(inputTokenAddress),
+      new ManifestAstValue.Decimal(requiredAmount),
     ]
   )
   .takeFromWorktop(
-    inputToken,
-    (builder, input_bucket) => 
+    inputTokenAddress,
+    (builder, inputBucket) => 
     builder.callMethod(
       componentAddress,
       "swap",
-      [
-        new ManifestAstValue.Bucket(input_bucket)
-      ]
+      [inputBucket]      
     )
   )
+  // bug
   .assertWorktopContainsByAmount(
-    inputToken,
-    requestedAmount
+    new ManifestAstValue.Address(requestedResource),
+    new ManifestAstValue.Decimal(requestedAmount)
   )
   .callMethod(
     accountAddress,
-    "deposit_batch",
-    new ManifestAstValue.Expression.entireWorktop()
+    "deposit_batch", 
+    [
+    ManifestAstValue.Expression.entireWorktop()
+    ]
   )
   .build();
+
+  console.log(manifest)
 
   let converted_manifest = await manifest.convert(
     InstructionList.Kind.String,
     NetworkId.RCnetV1
   )
 
+  let string_converted_manifest = converted_manifest.instructions.value;
   
-
-  // let string_converted_manifest = converted_manifest.instructions.value;
-  
-
   console.log("Create Token Manifest: ", string_converted_manifest)
 
   // Send manifest to extension for signing
@@ -682,7 +679,7 @@ let tokenArequest = await stateApi.entityFungibleResourceVaultPage(
 
   console.log("Token A Request: ", tokenArequest)
 
-  let tokenBrequest = await stateApi.entityFungibleResourceVaultPage(
+  let outputTokenRequest = await stateApi.entityFungibleResourceVaultPage(
     {
       stateEntityFungibleResourceVaultsPageRequest: {
         address: componentAddress,
@@ -691,7 +688,7 @@ let tokenArequest = await stateApi.entityFungibleResourceVaultPage(
     });
 
   
-  console.log("Token B Request: ", tokenBrequest)
+  console.log("Token B Request: ", outputTokenRequest)
 
   let token_a_amount = tokenArequest.items[0].amount;
   console.log("Token A Request: ", token_a_amount)
