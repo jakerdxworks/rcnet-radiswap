@@ -1,4 +1,4 @@
-// import './style.css'
+import './style.css'
 import scryptoLogo from './scryptoLogo.png'
 import { 
   RadixDappToolkit, 
@@ -11,23 +11,23 @@ import {
 } from '@radixdlt/radix-engine-toolkit'
 
 
-// document.querySelector('#app').innerHTML = `
-//   <div>
-//     <a href="https://vitejs.dev" target="_blank">
-//       <img src="/vite.svg" class="logo" alt="Vite logo" />
-//     </a>
-//     <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank">
-//       <img src="${scryptoLogo}" class="logo vanilla" alt="JavaScript logo" />
-//     </a>
-//     <h1>Hello Scrypto!</h1>
-//     <div class="card">
-//       <radix-connect-button />
-//     </div>
-//     <p class="read-the-docs">
-//       Click on the Scrypto logo to learn more
-//     </p>
-//   </div>
-// `
+document.querySelector('#app').innerHTML = `
+  <div>
+    <a href="https://vitejs.dev" target="_blank">
+      <img src="/vite.svg" class="logo" alt="Vite logo" />
+    </a>
+    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank">
+      <img src="${scryptoLogo}" class="logo vanilla" alt="JavaScript logo" />
+    </a>
+    <h1>Hello Scrypto!</h1>
+    <div class="card">
+      <radix-connect-button />
+    </div>
+    <p class="read-the-docs">
+      Click on the Scrypto logo to learn more
+    </p>
+  </div>
+`
 
 const dAppId = 'account_tdx_c_1pyu3svm9a63wlv6qyjuns98qjsnus0pzan68mjq2hatqejq9fr'
 
@@ -77,10 +77,12 @@ let tokenBAddress
 let swapFee
 let xrdAddress = "resource_tdx_c_1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq40v2wv"
 let poolunitsAddress
+let txLink = "https://rcnet-dashboard.radixdlt.com/transaction/"
 
 
 document.getElementById('createToken').onclick = async function () {
   let tokenName = document.getElementById("tokenName").value;
+  let tokenSymbol = document.getElementById("tokenSymbol").value;
 
   let manifest = new ManifestBuilder()
   .createFungibleResourceWithInitialSupply(
@@ -89,8 +91,8 @@ document.getElementById('createToken').onclick = async function () {
       ManifestAstValue.Kind.String,
       ManifestAstValue.Kind.String,
       [
-        new ManifestAstValue.String("name"),
-        new ManifestAstValue.String(tokenName)
+        [new ManifestAstValue.String("name"), new ManifestAstValue.String(tokenName)],
+        [new ManifestAstValue.String("symbol"), new ManifestAstValue.String(tokenSymbol)],
       ], 
     ),
     new ManifestAstValue.Map(
@@ -128,6 +130,30 @@ const result = await rdt
 if (result.isErr()) throw result.error
 
 console.log("Intantiate WalletSDK Result: ", result.value)
+
+// ************ Fetch the transaction status from the Gateway API ************
+let status = await transactionApi.transactionStatus({
+  transactionStatusRequest: {
+    intent_hash_hex: result.value.transactionIntentHash
+  }
+});
+console.log('Instantiate TransactionApi transaction/status:', status)
+
+// ************ Fetch entity addresses from gateway api and set entity variable **************
+let commitReceipt = await transactionApi.transactionCommittedDetails({
+  transactionCommittedDetailsRequest: {
+    intent_hash_hex: result.value.transactionIntentHash
+  }
+})
+console.log('Instantiate Committed Details Receipt', commitReceipt)
+
+// Retrieve entity address
+document.getElementById('newTokenAddress').innerText = commitReceipt.details.referenced_global_entities[0];
+
+const createTokenTxLink = document.querySelector(".createTokenTx");
+let tx = txLink + commitReceipt.transaction.intent_hash_hex;
+createTokenTxLink.href= tx;
+createTokenTxLink.style.display = "inline";
 
 }
 
@@ -233,6 +259,11 @@ document.getElementById('instantiateComponent').onclick = async function () {
   poolunitsAddress = commitReceipt.details.referenced_global_entities[1]
   document.getElementById('poolunitsAddress').innerText = poolunitsAddress;
 
+  const createTokenTxLink = document.querySelector(".instantiateComponentTx");
+  let tx = txLink + commitReceipt.transaction.intent_hash_hex;
+  createTokenTxLink.href= tx;
+  createTokenTxLink.style.display = "inline";
+
   loadTokenPair();
   loadPoolInformation();
 }
@@ -291,6 +322,27 @@ document.getElementById('swapToken').onclick = async function () {
   if (result.isErr()) throw result.error
 
   console.log("Intantiate WalletSDK Result: ", result.value)
+
+    // ************ Fetch the transaction status from the Gateway API ************
+    let status = await transactionApi.transactionStatus({
+      transactionStatusRequest: {
+        intent_hash_hex: result.value.transactionIntentHash
+      }
+    });
+    console.log('Instantiate TransactionApi transaction/status:', status)
+  
+    // ************ Fetch component address from gateway api and set componentAddress variable **************
+    let commitReceipt = await transactionApi.transactionCommittedDetails({
+      transactionCommittedDetailsRequest: {
+        intent_hash_hex: result.value.transactionIntentHash
+      }
+    })
+    console.log('Instantiate Committed Details Receipt', commitReceipt)
+  
+    const createTokenTxLink = document.querySelector(".swapTx");
+    let tx = txLink + commitReceipt.transaction.intent_hash_hex;
+    createTokenTxLink.href= tx;
+    createTokenTxLink.style.display = "inline";
 
   loadPoolInformation();
 }
@@ -414,8 +466,10 @@ document.getElementById('exactSwapToken').onclick = async function () {
   })
   console.log('Exact Swap Committed Details Receipt', commitReceipt)
 
-  // Show the receipt on the DOM
-  document.getElementById('exactReceipt').innerText = JSON.stringify(commitReceipt.details.receipt, null, 2);
+  const createTokenTxLink = document.querySelector(".exactSwapTx");
+  let tx = txLink + commitReceipt.transaction.intent_hash_hex;
+  createTokenTxLink.href= tx;
+  createTokenTxLink.style.display = "inline";
 
   loadPoolInformation();
 }
@@ -485,7 +539,28 @@ document.getElementById('addLiquidity').onclick = async function () {
   
     if (result.isErr()) throw result.error
   
-    console.log("Exact Swap sendTransaction Result: ", result)
+    console.log("Add Liquidity sendTransaction Result: ", result)
+
+    // Fetch the transaction status from the Gateway SDK
+    let status = await transactionApi.transactionStatus({
+      transactionStatusRequest: {
+        intent_hash_hex: result.value.transactionIntentHash
+      }
+    });
+    console.log('Add Liquidity TransactionAPI transaction/status: ', status)
+  
+    // fetch commit reciept from gateway api 
+    let commitReceipt = await transactionApi.transactionCommittedDetails({
+      transactionCommittedDetailsRequest: {
+        intent_hash_hex: result.value.transactionIntentHash
+      }
+    })
+    console.log('Add Liquidity Committed Details Receipt', commitReceipt)
+  
+    const createTokenTxLink = document.querySelector(".addLiquidityTx");
+    let tx = txLink + commitReceipt.transaction.intent_hash_hex;
+    createTokenTxLink.href= tx;
+    createTokenTxLink.style.display = "inline";
 
     loadPoolInformation();
 }
@@ -540,8 +615,29 @@ document.getElementById('removeLiquidity').onclick = async function () {
       })
   
     if (result.isErr()) throw result.error
+
+    console.log("Remove Liquidity sendTransaction Result: ", result)
+
+    // Fetch the transaction status from the Gateway SDK
+    let status = await transactionApi.transactionStatus({
+      transactionStatusRequest: {
+        intent_hash_hex: result.value.transactionIntentHash
+      }
+    });
+    console.log('Remove Liquidity TransactionAPI transaction/status: ', status)
   
-    console.log("Exact Swap sendTransaction Result: ", result)
+    // fetch commit reciept from gateway api 
+    let commitReceipt = await transactionApi.transactionCommittedDetails({
+      transactionCommittedDetailsRequest: {
+        intent_hash_hex: result.value.transactionIntentHash
+      }
+    })
+    console.log('Remove Liquidity Committed Details Receipt', commitReceipt)
+  
+    const createTokenTxLink = document.querySelector(".removeLiquidityTx");
+    let tx = txLink + commitReceipt.transaction.intent_hash_hex;
+    createTokenTxLink.href= tx;
+    createTokenTxLink.style.display = "inline";
 
     loadPoolInformation();
 }
@@ -604,7 +700,6 @@ window.onload = async function fetchData() {
   var selectTokenA = document.getElementById("selectTokenA");
   var selectTokenB = document.getElementById("selectTokenB");
 
-  // for (let i = 0; i < fungibles.length; i++)
   for (const val of fungibles_metadata)
   {
       var option = document.createElement("option");
@@ -633,7 +728,7 @@ function truncateMiddle(str) {
 
 
 async function loadPoolInformation() {
-  document.getElementById("tokenPair").innerText = tokenAAddress + "/" + tokenBAddress;
+  document.getElementById("tokenPair").innerText = truncateMiddle(tokenAAddress) + "/" + truncateMiddle(tokenBAddress);
 
   let tokenARequest = await stateApi.entityFungibleResourceVaultPage({
     stateEntityFungibleResourceVaultsPageRequest: {
@@ -682,3 +777,4 @@ async function loadTokenPair() {
   document.getElementById("tokenBAddress").innerText = tokenBAddress;
   
 }
+

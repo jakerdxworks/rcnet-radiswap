@@ -8,9 +8,9 @@
   </head>
   <body>
 
-    <div class="connectBtn">
+    <!-- <div class="connectBtn">
       <radix-connect-button />
-    </div>
+    </div> -->
 
     <div id="app"></div>
     <script type="module" src="/main.js"></script>
@@ -26,16 +26,17 @@
   </p>
 </div>
 
-<!-- <h2>Test Transaction</h2>
-<p><button id="testTransaction">Test Transaction</button></p> -->
 
 <h2>Create Token</h2>
 <div><input type="text" placeholder="Token Name" id="tokenName" /></div>
+<div><input type="text" placeholder="Token Symbol" id="tokenSymbol" /></div>
 <p><button id="createToken">Create Token</button></p>
 <p>Resource Address:
   <pre id="newTokenAddress"></pre>
 </p> 
-
+<p>
+<pre><a class="createTokenTx" href="#" target="_blank" style="display: none;">View transaction</a></pre>
+</p> 
 
 
 <h2>Instantiate Radiswap</h2>
@@ -49,6 +50,9 @@
 <div class="container">
   <p>Component Address: <span id="componentAddress"></span></p>
   <p>Pool Units Address: <span id="poolunitsAddress"></span></p>
+  <p>
+  <pre><a class="instantiateComponentTx" href="#" target="_blank" style="display: none;">View transaction</a></pre>
+  </p> 
 </div>
 
 <h2>Pool Information:</h2>
@@ -65,9 +69,9 @@
 <input type="text" placeholder="Amount" id="inputAmount" />
 <p><button id="swapToken">Swap Tokens</button></p>
 <div class="container">
-  <p>Receipt:<br>
-  <pre id="receipt"></pre>
-  </p>
+  <p>
+  <pre><a class="swapTx" href="#" target="_blank" style="display: none;">View transaction</a></pre>
+  </p> 
 </div>
 
 <h2>Exact Swap</h2>
@@ -83,13 +87,12 @@
 </div>
 <p><button id="exactSwapToken">Exact Swap Tokens</button></p>
 <div class="container">
-  <p>Receipt:<br>
-  <pre id="exactReceipt"></pre>
-  </p>
+  <p>
+  <pre><a class="exactSwapTx" href="#" target="_blank" style="display: none;">View transaction</a></pre>
+  </p> 
 </div>
 
 <h2>Add Liquidity</h2>
-
 <p>
 <pre id="tokenAAddress"></pre>
 
@@ -102,18 +105,18 @@
 
 <p><button id="addLiquidity">Add Liquidity</button></p>
 <div class="container">
-  <p>Receipt:<br>
-  <pre id="addLiquidityReceipt"></pre>
-  </p>
+  <p>
+  <pre><a class="addLiquidityTx" href="#" target="_blank" style="display: none;">View transaction</a></pre>
+  </p> 
 </div>
 
 <h3>Remove Liquidity</h3>
 <input type="text" placeholder="Pool Units Amount" id="poolUnitsAmount" />
 <p><button id="removeLiquidity">Remove Liquidity</button></p>
 <div class="container">
-  <p>Receipt:<br>
-  <pre id="receipt"></pre>
-  </p>
+  <p>
+  <pre><a class="removeLiquidityTx" href="#" target="_blank" style="display: none;">View transaction</a></pre>
+  </p> 
 </div>
 
 
