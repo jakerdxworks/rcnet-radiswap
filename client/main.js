@@ -64,7 +64,6 @@ console.log("dApp Toolkit: ", rdt)
 
 import { TransactionApi, StateApi, StatusApi, StreamApi } from "@radixdlt/babylon-gateway-api-sdk";
 
-
 const transactionApi = new TransactionApi();
 const stateApi = new StateApi();
 const statusApi = new StatusApi();
@@ -72,7 +71,7 @@ const streamApi = new StreamApi();
 
 let accountAddress // User account address
 let componentAddress = "component_tdx_c_1qdqsjrkdklx0a880vjf3q4n3cvf2x2nhgdjguk8cg42s34477x" 
-let packageAddress = "package_tdx_c_1qqfz89uh504w4ua0nvgx8ewel5jrp05glmdsggmyng5sldy63w"
+let packageAddress = "package_tdx_c_1qz2cml7v9j68ctflte02rj78ga8m8dtd7xepqy7pvccstk0204"
 let tokenAAddress 
 let tokenBAddress 
 let swapFee
@@ -131,13 +130,6 @@ if (result.isErr()) throw result.error
 console.log("Intantiate WalletSDK Result: ", result.value)
 
 }
-
-
-
-
-
-
-
 
 // ************ Instantiate component and fetch component and resource addresses *************
 document.getElementById('instantiateComponent').onclick = async function () {
@@ -431,9 +423,7 @@ document.getElementById('exactSwapToken').onclick = async function () {
 
 document.getElementById('addLiquidity').onclick = async function () {
   let tokenAAmount = document.getElementById("tokenAAmount").value;
-  console.log(tokenAAmount)
   let tokenBAmount = document.getElementById("tokenBAmount").value;
-  console.log(tokenBAmount)
 
   let manifest = new ManifestBuilder()
     .callMethod(
@@ -466,6 +456,62 @@ document.getElementById('addLiquidity').onclick = async function () {
             tokenBBucket
           ]
         )
+      )
+    )
+    .callMethod(
+      accountAddress,
+      "deposit_batch",
+      [
+        ManifestAstValue.Expression.entireWorktop()
+      ]
+    )
+    .build();
+
+    let converted_manifest = await manifest.convert(
+      InstructionList.Kind.String,
+      NetworkId.RCnetV1
+    )
+
+    let string_converted_manifest = converted_manifest.instructions.value;
+  
+    console.log("Create Token Manifest: ", string_converted_manifest)
+  
+    // Send manifest to extension for signing
+    const result = await rdt
+      .sendTransaction({
+        transactionManifest: string_converted_manifest,
+        version: 1,
+      })
+  
+    if (result.isErr()) throw result.error
+  
+    console.log("Exact Swap sendTransaction Result: ", result)
+
+    loadPoolInformation();
+}
+
+
+document.getElementById('removeLiquidity').onclick = async function () {
+  let poolUnitsAmount = document.getElementById("poolUnitsAmount").value;
+
+  let manifest = new ManifestBuilder()
+    .callMethod(
+      accountAddress,
+      "withdraw",
+      [
+        new ManifestAstValue.Address(poolunitsAddress),
+        new ManifestAstValue.Decimal(poolUnitsAmount)
+      ]
+    )
+    .takeFromWorktop(
+      poolunitsAddress,
+      (builder, poolUnitBucket) =>
+      builder.callMethod(
+        componentAddress,
+        "remove_liquidity",
+        [
+          poolUnitBucket
+        ]
       )
     )
     .callMethod(
