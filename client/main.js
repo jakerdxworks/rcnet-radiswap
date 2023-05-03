@@ -78,6 +78,7 @@ let swapFee
 let xrdAddress = "resource_tdx_c_1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq40v2wv"
 let poolunitsAddress
 let txLink = "https://rcnet-dashboard.radixdlt.com/transaction/"
+let fungibles_metadata = []
 
 
 document.getElementById('createToken').onclick = async function () {
@@ -656,10 +657,7 @@ window.onload = async function fetchData() {
   
   accountState.items[0].fungible_resources?.items.forEach(item => fungibles.push(item))
   //
-
-  const fungibles_metadata = [];
   
-
   let i = 0;
 
   while (i < fungibles.length) {
@@ -703,7 +701,6 @@ window.onload = async function fetchData() {
   for (const val of fungibles_metadata)
   {
       var option = document.createElement("option");
-      // option.value = fungibles[i].resource_address;
       option.value = val.resource_address;
       option.text =  val.metadata + " - " + truncateMiddle(val.resource_address);
       select.appendChild(option);
@@ -745,36 +742,52 @@ async function loadPoolInformation() {
   })
 
   document.getElementById("liquidity").innerText = 
-    truncateMiddle(tokenARequest.items[0].amount) + 
+    tokenARequest.items[0].amount + 
     "/" + 
-    truncateMiddle(tokenBRequest.items[0].amount);
+    tokenBRequest.items[0].amount;
 }
 
 // Retrieves TokenPair
 async function loadTokenPair() {
 
-  let tokenPair = [];
 
-  tokenPair.push(tokenAAddress);
-  tokenPair.push(tokenBAddress);
+
+  // let tokenPair = [];
+
+  // tokenPair.push(tokenAAddress);
+  // tokenPair.push(tokenBAddress);
   
   var select = document.createElement("select");
 
   var swapDropDown = document.getElementById("swapDropDown");
   var exactSwapDropDown = document.getElementById("exactSwapDropDown");
-  
-  for (const val of tokenPair)
+
+  for (const val of fungibles_metadata)
   {
+    if (val.resource_address == tokenAAddress || val.resource_address == tokenBAddress) {
       var option = document.createElement("option");
-      option.value = val;
-      option.text = val.charAt(0) + val.slice(1);
+      option.value = val.resource_address;
+      option.text =  val.metadata + " - " + truncateMiddle(val.resource_address);
       select.appendChild(option);
       swapDropDown.appendChild(option.cloneNode(true));
       exactSwapDropDown.appendChild(option.cloneNode(true));
+      document.getElementById("tokenAAddress").innerText = val.metadata + " - " + truncateMiddle(val.resource_address);
+      document.getElementById("tokenBAddress").innerText = val.metadata + " - " + truncateMiddle(val.resource_address);
+    }
   }
+  
+  // for (const val of tokenPair)
+  // {
+  //     var option = document.createElement("option");
+  //     option.value = val;
+  //     option.text = val.charAt(0) + val.slice(1);
+  //     select.appendChild(option);
+  //     swapDropDown.appendChild(option.cloneNode(true));
+  //     exactSwapDropDown.appendChild(option.cloneNode(true));
+  // }
 
-  document.getElementById("tokenAAddress").innerText = tokenAAddress;
-  document.getElementById("tokenBAddress").innerText = tokenBAddress;
+  // document.getElementById("tokenAAddress").innerText = tokenAAddress;
+  // document.getElementById("tokenBAddress").innerText = tokenBAddress;
   
 }
 
