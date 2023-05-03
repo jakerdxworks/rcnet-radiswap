@@ -76,7 +76,7 @@ let tokenAAddress
 let tokenBAddress 
 let swapFee
 let xrdAddress = "resource_tdx_c_1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq40v2wv"
-let poolunitsAddress
+let poolUnitsAddress
 let txLink = "https://rcnet-dashboard.radixdlt.com/transaction/"
 let fungibles_metadata = []
 
@@ -257,8 +257,9 @@ document.getElementById('instantiateComponent').onclick = async function () {
   componentAddress = commitReceipt.details.referenced_global_entities[0]
   document.getElementById('componentAddress').innerText = componentAddress;
   // ****** Set resourceAddress variable with gateway api commitReciept payload ******
-  poolunitsAddress = commitReceipt.details.referenced_global_entities[1]
-  document.getElementById('poolunitsAddress').innerText = poolunitsAddress;
+  poolUnitsAddress = commitReceipt.details.referenced_global_entities[2]
+  console.log(poolUnitsAddress)
+  document.getElementById('poolUnitsAddress').innerText = poolUnitsAddress;
 
   const createTokenTxLink = document.querySelector(".instantiateComponentTx");
   let tx = txLink + commitReceipt.transaction.intent_hash_hex;
@@ -575,12 +576,12 @@ document.getElementById('removeLiquidity').onclick = async function () {
       accountAddress,
       "withdraw",
       [
-        new ManifestAstValue.Address(poolunitsAddress),
+        new ManifestAstValue.Address(poolUnitsAddress),
         new ManifestAstValue.Decimal(poolUnitsAmount)
       ]
     )
     .takeFromWorktop(
-      poolunitsAddress,
+      poolUnitsAddress,
       (builder, poolUnitBucket) =>
       builder.callMethod(
         componentAddress,
@@ -750,13 +751,6 @@ async function loadPoolInformation() {
 // Retrieves TokenPair
 async function loadTokenPair() {
 
-
-
-  // let tokenPair = [];
-
-  // tokenPair.push(tokenAAddress);
-  // tokenPair.push(tokenBAddress);
-  
   var select = document.createElement("select");
 
   var swapDropDown = document.getElementById("swapDropDown");
@@ -771,23 +765,9 @@ async function loadTokenPair() {
       select.appendChild(option);
       swapDropDown.appendChild(option.cloneNode(true));
       exactSwapDropDown.appendChild(option.cloneNode(true));
-      document.getElementById("tokenAAddress").innerText = val.metadata + " - " + truncateMiddle(val.resource_address);
-      document.getElementById("tokenBAddress").innerText = val.metadata + " - " + truncateMiddle(val.resource_address);
+      document.getElementById("tokenAAddress").innerText = val.metadata + " - " + truncateMiddle(tokenAAddress);
+      document.getElementById("tokenBAddress").innerText = val.metadata + " - " + truncateMiddle(tokenBAddress);
     }
   }
-  
-  // for (const val of tokenPair)
-  // {
-  //     var option = document.createElement("option");
-  //     option.value = val;
-  //     option.text = val.charAt(0) + val.slice(1);
-  //     select.appendChild(option);
-  //     swapDropDown.appendChild(option.cloneNode(true));
-  //     exactSwapDropDown.appendChild(option.cloneNode(true));
-  // }
-
-  // document.getElementById("tokenAAddress").innerText = tokenAAddress;
-  // document.getElementById("tokenBAddress").innerText = tokenBAddress;
-  
 }
 
