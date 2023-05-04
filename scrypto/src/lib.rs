@@ -57,6 +57,9 @@ mod radiswap_module {
                 )
                 .mint_initial_supply(100);
 
+            let access_rules_config = AccessRulesConfig::new()
+                .default(rule!(allow_all), rule!(deny_all));
+
             // Create the Radiswap component and globalize it
             let radiswap: ComponentAddress = Self {
                 vault_a: Vault::with_bucket(bucket_a),
@@ -66,8 +69,8 @@ mod radiswap_module {
                 fee: fee,
             }
             .instantiate()
-            .globalize();
-
+            .globalize_with_access_rules(access_rules_config);
+            
             // Return the component address as well as the pool units tokens
             (radiswap, pool_units)
         }
