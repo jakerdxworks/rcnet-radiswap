@@ -20,7 +20,9 @@ import {
   TransactionIntent,
   SignedTransactionIntent,
   RadixEngineToolkit,
+  PublicKey,
 } from '@radixdlt/radix-engine-toolkit'
+import fs from 'fs';
 
 
 document.querySelector('#app').innerHTML = `
@@ -92,28 +94,37 @@ let poolUnitsAddress
 let txLink = "https://rcnet-dashboard.radixdlt.com/transaction/"
 let fungibles_metadata = []
 let token_pair = []
+let componentAddressList = []
 
 document.getElementById('createToken').onclick = async function () {
-  // const fs = require('fs');
-  // const code = fs.readFileSync('/scrypto/target/wasm32-unknown-unknown/release/rcnet_radiswap.schema');
-  // const schema = fs.readFileSync('/scrypto/target/wasm32-unknown-unknown/release/rcnet_radiswap.schema');
+  const code = fs.readFileSync('/scrypto/target/wasm32-unknown-unknown/release/rcnet_radiswap.wasm');
+  const schema = fs.readFileSync('/scrypto/target/wasm32-unknown-unknown/release/rcnet_radiswap.schema');
 
   let notaryPrivateKey = new PrivateKey.EcdsaSecp256k1(
     "40c1b9deccc56c0da69821dd652782887b5d31fe6bf6ead519a23f9e9472b49b"
   );
+
+  let signer1PublicKey = new PublicKey.EcdsaSecp256k1(
+    "020166fe820d94d7e207d2076e85f740b7593189e9ea1f166fa0db6831f73247bc"
+    )
   
-  // let signer1PrivateKey = new PrivateKey.EddsaEd25519(
-  //   "69366e446ad19a7540b4272c614bbc2b242656815eb03b1d29a53c950201ae76"
-  // );
-  // let signer2PrivateKey = new PrivateKey.EcdsaSecp256k1(
-  //   "5068952ca5aa655fe9257bf2d89f3b86f4dda6be6f5b76e4ed104c38fd21e8d7"
-  // );
+  let signer1PrivateKey = new PrivateKey.EcdsaSecp256k1(
+    "df1fdb3f36d7a079c4b7bd288ae2122e2abdbb5836bb9ac3c9c9eef53807b2eb"
+  );
+
+  let virtualAccountAddress =
+  await RadixEngineToolkit.deriveVirtualAccountAddress(
+    signer1PublicKey,
+    NetworkId.RCnetV1
+  );
+
+  console.log(virtualAccountAddress);
 
   let transactionHeader = new TransactionHeader(
     1 /* The transaction version. Currently always 1 */,
     NetworkId.RCnetV1 /* The network that this transaction is destined to */,
-    3910 /* The start epoch (inclusive) of when this transaction becomes valid */,
-    3920 /* The end epoch (exclusive) of when this transaction is no longer valid */,
+    6182 /* The start epoch (inclusive) of when this transaction becomes valid */,
+    6250 /* The end epoch (exclusive) of when this transaction is no longer valid */,
     generateRandomNonce() /* A random nonce */,
     notaryPrivateKey.publicKey() /* The public key of the notary */,
     true /* Whether the notary signature is also considered as an intent signature */,
@@ -122,48 +133,48 @@ document.getElementById('createToken').onclick = async function () {
   );
 
 
-  // let manifest = new ManifestBuilder()
-  //   .publishPackage(
-  //     code,
-  //     schema,
-  //     new ManifestAstValue.Map(
-  //       ManifestAstValue.Kind.String,
-  //       ManifestAstValue.Kind.String,
-  //       []
-  //     ),
-  //     new ManifestAstValue.Map(
-  //       ManifestAstValue.Kind.String,
-  //       ManifestAstValue.Kind.String,
-  //       []
-  //     ),
-  //     new ManifestAstValue.Tuple([
-  //       new ManifestAstValue.Map(
-  //         ManifestAstValue.Kind.Tuple,
-  //         ManifestAstValue.Kind.Enum,
-  //         []
-  //       ),
-  //       new ManifestAstValue.Map(
-  //         ManifestAstValue.Kind.String,
-  //         ManifestAstValue.Kind.Enum,
-  //         []
-  //       ),
-  //       new ManifestAstValue.Enum(new ManifestAstValue.EnumU8Discriminator(0)),
-  //       new ManifestAstValue.Map(
-  //         ManifestAstValue.Kind.Tuple,
-  //         ManifestAstValue.Kind.Enum,
-  //         []
-  //       ),
-  //       new ManifestAstValue.Map(
-  //         ManifestAstValue.Kind.String,
-  //         ManifestAstValue.Kind.Enum,
-  //         []
-  //       ),
-  //       new ManifestAstValue.Enum(new ManifestAstValue.EnumU8Discriminator(0)),
-  //     ])
-  //   )
+  let manifest = new ManifestBuilder()
+    .publishPackage(
+      code,
+      schema,
+      new ManifestAstValue.Map(
+        ManifestAstValue.Kind.String,
+        ManifestAstValue.Kind.String,
+        []
+      ),
+      new ManifestAstValue.Map(
+        ManifestAstValue.Kind.String,
+        ManifestAstValue.Kind.String,
+        []
+      ),
+      new ManifestAstValue.Tuple([
+        new ManifestAstValue.Map(
+          ManifestAstValue.Kind.Tuple,
+          ManifestAstValue.Kind.Enum,
+          []
+        ),
+        new ManifestAstValue.Map(
+          ManifestAstValue.Kind.String,
+          ManifestAstValue.Kind.Enum,
+          []
+        ),
+        new ManifestAstValue.Enum(new ManifestAstValue.EnumU8Discriminator(0)),
+        new ManifestAstValue.Map(
+          ManifestAstValue.Kind.Tuple,
+          ManifestAstValue.Kind.Enum,
+          []
+        ),
+        new ManifestAstValue.Map(
+          ManifestAstValue.Kind.String,
+          ManifestAstValue.Kind.Enum,
+          []
+        ),
+        new ManifestAstValue.Enum(new ManifestAstValue.EnumU8Discriminator(0)),
+      ])
+    )
 
-  let tokenName = document.getElementById("tokenName").value;
-  let tokenSymbol = document.getElementById("tokenSymbol").value;
+  // let tokenName = document.getElementById("tokenName").value;
+  // let tokenSymbol = document.getElementById("tokenSymbol").value;
 
   // let manifest = new ManifestBuilder()
   // .createFungibleResourceWithInitialSupply(
@@ -188,29 +199,34 @@ document.getElementById('createToken').onclick = async function () {
   // ])
 
   // We then build the transaction manifest
-  let manifest = new ManifestBuilder()
-    .callMethod(
-      accountAddress,
-      "withdraw",
-      [
-        new ManifestAstValue.Address(
-          xrdAddress
-        ),
-        new ManifestAstValue.Decimal(10),
-      ]
-    )
-    .takeFromWorktop(
-      xrdAddress,
-      (builder, bucket) =>
-        builder.callMethod(
-          accountAddress,
-          "deposit",
-          [bucket]
-        )
-      )
-      .build();
+  // let manifest = new ManifestBuilder()
+  //   .callMethod(
+  //     virtualAccountAddress,
+  //     "lock_fee",
+  //     [new ManifestAstValue.Decimal(10)]
+  //   )
+  //   .callMethod(
+  //     virtualAccountAddress,
+  //     "withdraw",
+  //     [
+  //       new ManifestAstValue.Address(
+  //         xrdAddress
+  //       ),
+  //       new ManifestAstValue.Decimal(10),
+  //     ]
+  //   )
+  //   .takeFromWorktop(
+  //     xrdAddress,
+  //     (builder, bucket) =>
+  //       builder.callMethod(
+  //         virtualAccountAddress,
+  //         "deposit",
+  //         [bucket]
+  //       )
+  //     )
+  //     .build();
 
-  console.log(manifest)
+  // console.log(manifest)
 
   // We may now build the complete transaction through the transaction builder.
   let transaction = await TransactionBuilder.new().then(
@@ -218,35 +234,54 @@ document.getElementById('createToken').onclick = async function () {
       builder
         .header(transactionHeader)
         .manifest(manifest)
+        .sign(signer1PrivateKey)
         .notarize(notaryPrivateKey)
   );
 
-  console.log(await transaction.compile())
+  let notarizedTransactionUint8Array = await transaction.compile();
+  let notarizedTransactionHex = Convert.Uint8Array.toHexString(notarizedTransactionUint8Array);
+  console.log(notarizedTransactionHex)
 
-  let noterizedTransaction = await transaction.compile();
-
-  let noterized = Convert.Uint8Array.toHexString(noterizedTransaction);
-
-  let transactionId = await transaction.transactionId();
-  console.log(Convert.Uint8Array.toHexString(transactionId));
-
-  console.log(transactionId)
-
-  let sendTransaction = await transactionApi.transactionSubmit({
-      transactionSubmitRequest: {
-        notarized_transaction_hex: noterized
-      }
-  })
-
-  let commitReceipt = await transactionApi.transactionCommittedDetails({
-    transactionCommittedDetailsRequest: {
-      intent_hash_hex: transactionId
+  await transactionApi.transactionSubmit({
+    transactionSubmitRequest: {
+      notarized_transaction_hex: notarizedTransactionHex,
     }
   })
-  console.log('Swap Committed Details Receipt', commitReceipt)
+
+  let retrieveTransactionId = await transaction.transactionId();
+  let transactionIdHash = Convert.Uint8Array.toHexString(retrieveTransactionId);
+  console.log(transactionIdHash)
+
+    // // ************ Fetch component address from gateway api and set componentAddress variable **************
+    // let commitReceipt = await transactionApi.transactionCommittedDetails({
+    //   transactionCommittedDetailsRequest: {
+    //     intent_hash_hex: transactionIdHash
+    //   }
+    // })
+    // console.log('Instantiate Committed Details Receipt', commitReceipt)
+    const createTokenTxLink = document.querySelector(".createTokenTx");
+    let tx = txLink + transactionIdHash;
+    createTokenTxLink.href= tx;
+    createTokenTxLink.style.display = "inline";
+
+  // let sendTransaction = await transactionApi.transactionSubmit({
+  //     transactionSubmitRequest: {
+  //       notarized_transaction_hex: noterized
+  //     }
+  // })
+
+  // let transactionIntentHash = await transaction.signedIntentHash();
+  // let transactionIntentHashHex = Convert.Uint8Array.toHexString(transactionIntentHash);
+
+  // let commitReceipt = await transactionApi.transactionCommittedDetails({
+  //   transactionCommittedDetailsRequest: {
+  //     intent_hash_hex: transactionIntentHashHex
+  //   }
+  // })
+  // console.log('Swap Committed Details Receipt', commitReceipt)
 
 
-  console.log(sendTransaction)
+  // console.log(sendTransaction)
   
   
 
@@ -340,7 +375,15 @@ document.getElementById('createToken').onclick = async function () {
 // }
 
 // ************ Instantiate component and fetch component and resource addresses *************
+// This function is used to instantiate a Radiswap component which creates a two token liquidity pool
 document.getElementById('instantiateComponent').onclick = async function () {
+  // We first retrieve our global variables (tokenAAddress and tokenBAddress) to set its value so that we
+  // can conveniently use the variable in other parts of our code. The value that will be saved to this 
+  // variable will be the selected token resources that the user wishes to create this liquidity pool.
+  // Additionally, since we expect the user to have an indeterminate amount that they would like to 
+  // deposit into this pool for every instance, we will only create local variables for the amount inputs
+  // (tokenAAmount and tokenBAmount) to be used only once for this function. Likewise with our packageAddress
+  // variable.
   // let packageAddress = document.getElementById("packageAddress").value;
   tokenAAddress = document.getElementById("selectTokenA").value;
   let tokenAAmount = document.getElementById("amountA").value;
@@ -348,6 +391,15 @@ document.getElementById('instantiateComponent').onclick = async function () {
   let tokenBAmount = document.getElementById("amountB").value;
   swapFee = document.getElementById("swapFee").value;
 
+  // We create a Transaction Manifest using the ManifestBuilder class conveniently provided  by the RadixEngineToolkit.
+  // This Transaction Manifest has the following instructions:
+  // 1. Withdraw the first selected token and amount out of the user's account based on the user's input.
+  // 2. Withdraw the second selected token and amount out of the user's account based on the user's input.
+  // 3. Take the first token resource and amount and place it in a `Bucket`.
+  // 4. Take the second token resource and amount and place it in a `Bucket.
+  // 5. Pass the buckets as argument inputs to instantiate the Radiswap component along witht he determined
+  // swap fee based on the user's input.
+  // 6. Deposit any (Pool Units resourece) resource returned from the instantiation function to the user's account.
   let manifest = new ManifestBuilder()
     .callMethod(
       accountAddress,
@@ -379,7 +431,6 @@ document.getElementById('instantiateComponent').onclick = async function () {
             tokenABucket,
             tokenBBucket,
             new ManifestAstValue.Decimal(swapFee),
-            // new ManifestAstValue.Address(dAppId)
           ]
         )
       )
@@ -392,22 +443,15 @@ document.getElementById('instantiateComponent').onclick = async function () {
     )
     .build();
 
-  console.log("Manifest ", manifest)
-
-  let test_manifest = manifest.instructions.value;
-
-  console.log("Instantiate Manifest: ", test_manifest)
-
   let converted_manifest = await manifest.convert(
     InstructionList.Kind.String,
     NetworkId.RCnetV1
   );
   
-  console.log("Conversion: ", converted_manifest)
-  
   let string_converted_manifest = converted_manifest.instructions.value;
           
   console.log("Instantiate Manifest: ", string_converted_manifest)
+  
   // Send manifest to extension for signing
   const result = await rdt
     .sendTransaction({
@@ -436,18 +480,22 @@ document.getElementById('instantiateComponent').onclick = async function () {
   console.log('Instantiate Committed Details Receipt', commitReceipt)
 
   // ****** Set componentAddress variable with gateway api commitReciept payload ******
-  componentAddress = commitReceipt.details.referenced_global_entities[0]
+  componentAddress = commitReceipt.details.referenced_global_entities[0];
   document.getElementById('componentAddress').innerText = truncateMiddle(componentAddress);
+  componentAddressList.push(componentAddress);
   // ****** Set resourceAddress variable with gateway api commitReciept payload ******
-  poolUnitsAddress = truncateMiddle(commitReceipt.details.referenced_global_entities[2])
-  console.log(poolUnitsAddress)
+  poolUnitsAddress = truncateMiddle(commitReceipt.details.referenced_global_entities[2]);
   document.getElementById('poolUnitsAddress').innerText = poolUnitsAddress;
 
   const createTokenTxLink = document.querySelector(".instantiateComponentTx");
+  let transactionId = commitReceipt.transaction.intent_hash_hex; 
   let tx = txLink + commitReceipt.transaction.intent_hash_hex;
   createTokenTxLink.href= tx;
+  
+  // createTokenTxLink.href= transactionId;
   createTokenTxLink.style.display = "inline";
 
+  loadPools();
   loadTokenPair();
   loadPoolInformation();
 }
@@ -891,29 +939,12 @@ window.onload = async function fetchData() {
   }
 }
 
-function truncateMiddle(str) {
-  if (str.length <= 10) {
-    return str;
-  }
-
-  const ellipsis = "...";
-  const charsToShow = 18 - ellipsis.length;
-  const frontChars = Math.ceil(charsToShow / 2);
-  const backChars = Math.floor(charsToShow / 2);
-
-  const truncatedStr = str.substr(0, frontChars) + ellipsis + str.substr(str.length - backChars);
-  return truncatedStr;
-}
-
-
 async function loadPoolInformation() {
   document.getElementById("tokenPair").innerText = 
     fungibles_metadata[0].metadata + " - " + truncateMiddle(fungibles_metadata[0].resource_address) 
     + "/" + 
     fungibles_metadata[1].metadata + " - " + truncateMiddle(fungibles_metadata[0].resource_address);
 
-  console.log(componentAddress)
-  console.log(tokenAAddress)
   let tokenARequest = await stateApi.entityFungibleResourceVaultPage({
     stateEntityFungibleResourceVaultsPageRequest: {
       address: componentAddress,
@@ -958,5 +989,35 @@ async function loadTokenPair() {
       }
     }
   }
+}
+
+async function loadPools() {
+
+  var select = document.createElement("select");
+
+  var componentAddressDropDown = document.getElementById("componentAddressDropDown");
+
+  for (const val of componentAddressList)
+  {
+    var option = document.createElement("option");
+    option.value = val;
+    option.text =  truncateMiddle(val);
+    select.appendChild(option);
+  }
+  componentAddressDropDown.appendChild(select);
+}
+
+function truncateMiddle(str) {
+  if (str.length <= 10) {
+    return str;
+  }
+
+  const ellipsis = "...";
+  const charsToShow = 18 - ellipsis.length;
+  const frontChars = Math.ceil(charsToShow / 2);
+  const backChars = Math.floor(charsToShow / 2);
+
+  const truncatedStr = str.substr(0, frontChars) + ellipsis + str.substr(str.length - backChars);
+  return truncatedStr;
 }
 
