@@ -120,8 +120,8 @@ console.log(virtualAccountAddress);
 let transactionHeader = new TransactionHeader(
   1 /* The transaction version. Currently always 1 */,
   NetworkId.RCnetV1 /* The network that this transaction is destined to */,
-  6182 /* The start epoch (inclusive) of when this transaction becomes valid */,
-  6250 /* The end epoch (exclusive) of when this transaction is no longer valid */,
+  6626 /* The start epoch (inclusive) of when this transaction becomes valid */,
+  7000 /* The end epoch (exclusive) of when this transaction is no longer valid */,
   generateRandomNonce() /* A random nonce */,
   notaryPrivateKey.publicKey() /* The public key of the notary */,
   true /* Whether the notary signature is also considered as an intent signature */,
@@ -152,17 +152,17 @@ document.getElementById("getRcnetTokens").onclick = async function () {
     NetworkId.RCnetV1
   );
 
-  let transactionHeader = new TransactionHeader(
-    1 /* The transaction version. Currently always 1 */,
-    NetworkId.RCnetV1 /* The network that this transaction is destined to */,
-    6182 /* The start epoch (inclusive) of when this transaction becomes valid */,
-    6250 /* The end epoch (exclusive) of when this transaction is no longer valid */,
-    generateRandomNonce() /* A random nonce */,
-    notaryPrivateKey.publicKey() /* The public key of the notary */,
-    true /* Whether the notary signature is also considered as an intent signature */,
-    100_000_000 /* A limit on the amount of cost units that the transaction can consume */,
-    0 /* The percentage of fees that goes to validators */
-  );
+  // let transactionHeader = new TransactionHeader(
+  //   1 /* The transaction version. Currently always 1 */,
+  //   NetworkId.RCnetV1 /* The network that this transaction is destined to */,
+  //   await retrieveCurrentEpoch() /* The start epoch (inclusive) of when this transaction becomes valid */,
+  //   await retrieveCurrentEpoch() + 50 /* The end epoch (exclusive) of when this transaction is no longer valid */,
+  //   generateRandomNonce() /* A random nonce */,
+  //   notaryPrivateKey.publicKey() /* The public key of the notary */,
+  //   true /* Whether the notary signature is also considered as an intent signature */,
+  //   100_000_000 /* A limit on the amount of cost units that the transaction can consume */,
+  //   0 /* The percentage of fees that goes to validators */
+  // );
 
   let manifest = new ManifestBuilder()
     .callMethod(
@@ -870,7 +870,10 @@ window.onload = async function fetchData() {
   const fungibles = account.fungible_resources?.items ?? [];
   fungibles_metadata = await Promise.all(fungibles.map(async (fungible) => {
     const { resource_address: resourceAddress } = fungible;
-    const metadata = await retrieveTokenSymbol(resourceAddress).catch(() => null);
+    const metadata = await stateApi.entityMetadataPage({
+      stateEntityMetadataPageRequest: { address: resourceAddress }
+    }).catch(() => null);
+
     return {
       metadata: metadata?.items[1]?.value.as_string ?? "N/A",
       resource_address: resourceAddress
@@ -983,5 +986,13 @@ async function retrieveTokenSymbol(resourceAddress) {
     stateEntityMetadataPageRequest: { address: resourceAddress }
   });
   return metadata?.items[1]?.value.as_string ?? "N/A";
+}
+
+async function retrieveCurrentEpoch() {
+  const retrieveStatus = await statusApi.gatewayStatus({
+  })
+
+  let currentEpoch = currentEpoch.ledger_state.epoch;
+  return currentEpoch;
 }
 
