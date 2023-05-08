@@ -105,7 +105,13 @@ let swapFee
 let xrdAddress = "resource_tdx_c_1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq40v2wv"
 let poolUnitsAddress
 let txLink = "https://rcnet-dashboard.radixdlt.com/transaction/"
-let fungibles_metadata = []
+interface FungibleMetadata {
+  metadata: string;
+  resource_address: string;
+}
+
+let fungibles_metadata: FungibleMetadata[] = []
+
 let token_pair = []
 let componentAddressList = []
 
@@ -486,21 +492,17 @@ instantiateComponentElement?.addEventListener('click', async function () {
   console.log('Instantiate Committed Details Receipt', commitReceipt)
 
   // ****** Set componentAddress variable with gateway api commitReciept payload ******
-  componentAddress = commitReceipt.details.referenced_global_entities[0];
-  document.getElementById('componentAddress').innerText = truncateMiddle(componentAddress);
-  componentAddressList.push(componentAddress);
-  // ****** Set resourceAddress variable with gateway api commitReciept payload ******
-  poolUnitsAddress = truncateMiddle(commitReceipt.details.referenced_global_entities[2]);
-  document.getElementById('poolUnitsAddress').innerText = poolUnitsAddress;
-
-  const createTokenTxLink = document.querySelector(".instantiateComponentTx");
-  let transactionId = commitReceipt.transaction.intent_hash_hex; 
-  let tx = txLink + commitReceipt.transaction.intent_hash_hex;
-  createTokenTxLink.href= tx;
+  let componentAddress: string = commitReceipt.details.referenced_global_entities[0];
+  document.getElementById('componentAddress')!.innerText = truncateMiddle(componentAddress);
   
-  // createTokenTxLink.href= transactionId;
+  let poolUnitsAddress: string = truncateMiddle(commitReceipt.details.referenced_global_entities[2]);
+  document.getElementById('poolUnitsAddress')!.innerText = poolUnitsAddress;
+  
+  const createTokenTxLink: HTMLAnchorElement = document.querySelector(".instantiateComponentTx")!;
+  let tx: string = txLink + commitReceipt.transaction.intent_hash_hex;
+  createTokenTxLink.href = tx;
   createTokenTxLink.style.display = "inline";
-
+  
   loadPools();
   loadTokenPair();
   loadPoolInformation();
@@ -986,47 +988,31 @@ async function loadPoolInformation() {
 
 // Retrieves TokenPair
 async function loadTokenPair() {
+  const select = document.createElement("select");
+  const swapDropDown = document.getElementById("swapDropDown");
+  const exactSwapDropDown = document.getElementById("exactSwapDropDown");
 
-  var select = document.createElement("select");
-
-  var swapDropDown = document.getElementById("swapDropDown");
-  var exactSwapDropDown = document.getElementById("exactSwapDropDown");
-
-  for (const val of fungibles_metadata)
-  {
-    if (val.resource_address === tokenAAddress || val.resource_address === tokenBAddress) {
-      var option = document.createElement("option");
+  fungibles_metadata
+    .filter((val) => val.resource_address === tokenAAddress || val.resource_address === tokenBAddress)
+    .forEach((val) => {
+      const option = document.createElement("option");
       option.value = val.resource_address;
-      option.text =  val.metadata + " - " + truncateMiddle(val.resource_address);
+      option.text = `${val.metadata} - ${truncateMiddle(val.resource_address)}`;
       select.appendChild(option);
       swapDropDown.appendChild(option.cloneNode(true));
       exactSwapDropDown.appendChild(option.cloneNode(true));
+
       if (val.resource_address === tokenAAddress) {
-        document.getElementById("tokenAAddress").innerText = val.metadata + " - " + truncateMiddle(val.resource_address);
+        document.getElementById("tokenAAddress")!.innerText = `${val.metadata} - ${truncateMiddle(val.resource_address)}`;
       } else if (val.resource_address === tokenBAddress) {
-        document.getElementById("tokenBAddress").innerText = val.metadata + " - " + truncateMiddle(val.resource_address);
+        document.getElementById("tokenBAddress")!.innerText = `${val.metadata} - ${truncateMiddle(val.resource_address)}`;
       }
-    }
-  }
+    });
 }
 
-async function loadPools() {
 
-  var select = document.createElement("select");
 
-  var componentAddressDropDown = document.getElementById("componentAddressDropDown");
-
-  for (const val of componentAddressList)
-  {
-    var option = document.createElement("option");
-    option.value = val;
-    option.text =  truncateMiddle(val);
-    select.appendChild(option);
-  }
-  componentAddressDropDown.appendChild(select);
-}
-
-function truncateMiddle(str) {
+function truncateMiddle(str: string) {
   if (str.length <= 10) {
     return str;
   }

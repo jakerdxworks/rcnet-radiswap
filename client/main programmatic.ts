@@ -24,7 +24,8 @@ import {
 } from '@radixdlt/radix-engine-toolkit'
 
 
-document.querySelector('#app').innerHTML = `
+const appElement = document.querySelector('#app') as HTMLElement;
+appElement.innerHTML = `
   <div>
     <a href="https://vitejs.dev" target="_blank">
       <img src="/vite.svg" class="logo" alt="Vite logo" />
@@ -40,7 +41,8 @@ document.querySelector('#app').innerHTML = `
       Click on the Scrypto logo to learn more
     </p>
   </div>
-`
+`;
+
 
 import { TransactionApi, StateApi, StatusApi, StreamApi, } from "@radixdlt/babylon-gateway-api-sdk";
 
@@ -58,8 +60,15 @@ let swapFee
 let xrdAddress = "resource_tdx_c_1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq40v2wv"
 let poolUnitsAddress
 let txLink = "https://rcnet-dashboard.radixdlt.com/transaction/"
-let fungibles_metadata = []
+type FungibleMetadata = {
+  metadata: string;
+  resource_address: string;
+};
+
+let fungibles_metadata: FungibleMetadata[] = [];
+
 let token_pair = []
+let componentAddressList = []
 
 let notaryPrivateKey = new PrivateKey.EcdsaSecp256k1(
   "40c1b9deccc56c0da69821dd652782887b5d31fe6bf6ead519a23f9e9472b49b"
@@ -80,8 +89,6 @@ await RadixEngineToolkit.deriveVirtualAccountAddress(
   NetworkId.RCnetV1
 );
 
-console.log(virtualAccountAddress)
-
 let transactionHeader = new TransactionHeader(
   1 /* The transaction version. Currently always 1 */,
   NetworkId.RCnetV1 /* The network that this transaction is destined to */,
@@ -95,9 +102,10 @@ let transactionHeader = new TransactionHeader(
 );
 
 
-document.getElementById("getRcnetTokens").onclick = async function () {
+const getRcnetTokensElement = document.getElementById("getRcnetTokens") as HTMLButtonElement;
+getRcnetTokensElement.onclick = async function () {
 
-  let manifest = new ManifestBuilder()
+  const manifest: TransactionManifest = new ManifestBuilder()
     .callMethod(
       "component_tdx_c_1q0kryz5scup945usk39qjc2yjh6l5zsyuh8t7v5pk0tsacmzk0",
       "lock_fee",
@@ -119,7 +127,7 @@ document.getElementById("getRcnetTokens").onclick = async function () {
     )
     .build();
 
-  let transaction = await TransactionBuilder.new().then(
+  const transaction = await TransactionBuilder.new().then(
     (builder) =>
       builder
       .header(transactionHeader)
@@ -128,8 +136,8 @@ document.getElementById("getRcnetTokens").onclick = async function () {
       .notarize(notaryPrivateKey)
     );
 
-  let notarizedTransactionUint8Array = await transaction.compile();
-  let notarizedTransactionHex = Convert.Uint8Array.toHexString(notarizedTransactionUint8Array);
+  const notarizedTransactionUint8Array = await transaction.compile();
+  const notarizedTransactionHex = Convert.Uint8Array.toHexString(notarizedTransactionUint8Array);
   console.log(notarizedTransactionHex)
 
   await transactionApi.transactionSubmit({
@@ -138,26 +146,27 @@ document.getElementById("getRcnetTokens").onclick = async function () {
     }
   })
 
-  let retrieveTransactionId = await transaction.transactionId();
-  let transactionIdHash = Convert.Uint8Array.toHexString(retrieveTransactionId);
+  const retrieveTransactionId = await transaction.transactionId();
+  const transactionIdHash = Convert.Uint8Array.toHexString(retrieveTransactionId);
   console.log(transactionIdHash)
 
   // ************ Fetch component address from gateway api and set componentAddress variable **************
-  let commitReceipt = await waitForCommitment(transactionIdHash);
+  const commitReceipt = await waitForCommitment(transactionIdHash);
   console.log('Exact Swap Committed Details Receipt', commitReceipt)
 
-  const getRcnetTokenTxLink = document.querySelector(".getRcnetTokenTx");
+  const getRcnetTokenTxLink = document.querySelector(".getRcnetTokenTx") as HTMLAnchorElement;
   getRcnetTokenTxLink.href= `${txLink}${transactionIdHash}`;
   getRcnetTokenTxLink.style.display = "inline";
 }
 
-document.getElementById("deployPackage").onclick = async function () {
-  const fileWasm = document.getElementById("fileWasm");
-  const filew = fileWasm.files[0];
+document.getElementById("deployPackage")!.onclick = async function () {
+
+  const fileWasm = document.getElementById("fileWasm") as HTMLInputElement;
+  const filew = fileWasm.files?.[0] as File;
   const code = await loadFile(filew);
 
-  const fileSchema = document.getElementById("fileSchema");
-  const files = fileSchema.files[0];
+  const fileSchema = document.getElementById("fileSchema") as HTMLInputElement;
+  const files = fileSchema.files?.[0] as File;
   const schema = await loadFile(files);
 
   let manifest = new ManifestBuilder()
@@ -169,8 +178,8 @@ document.getElementById("deployPackage").onclick = async function () {
       ]
     )
     .publishPackage(
-      code,
-      schema,
+      code!,
+      schema!,
       new ManifestAstValue.Map(
         ManifestAstValue.Kind.String,
         ManifestAstValue.Kind.Tuple,
@@ -245,176 +254,16 @@ document.getElementById("deployPackage").onclick = async function () {
 
   // let packageAddress = commitReceipt.details.referenced_global_entities[0];
 
-  const deployPackageTxLink = document.querySelector(".deployPackageTx");
-  deployPackageTxLink.href= `${txLink}${transactionIdHash}`;
+  const deployPackageTxLink = document.querySelector(".deployPackageTx") as HTMLAnchorElement;
+  deployPackageTxLink.href = `${txLink}${transactionIdHash}`;
   deployPackageTxLink.style.display = "inline";
-
-}
-
-document.getElementById("setRoyalty").onclick = async function () {
-  let manifest = new ManifestBuilder()
-    .callMethod(
-      virtualAccountAddress,
-      "lock_fee",
-      [
-        new ManifestAstValue.Decimal(10)
-      ]
-    )
-    .setPackageRoyaltyConfig(
-      new ManifestAstValue.Address(
-        packageAddress
-      ),
-      new ManifestAstValue.Map(
-        ManifestAstValue.Kind.String,
-        ManifestAstValue.Kind.Tuple,
-        []
-      )
-    )
-    .build();
-
-    let transaction = await TransactionBuilder.new().then(
-      (builder) =>
-        builder
-          .header(transactionHeader)
-          .manifest(manifest)
-          .sign(signer1PrivateKey)
-          .notarize(notaryPrivateKey)
-    );
-      
-    let notarizedTransactionUint8Array = await transaction.compile();
-    let notarizedTransactionHex = Convert.Uint8Array.toHexString(notarizedTransactionUint8Array);
-    console.log(notarizedTransactionHex)
-  
-    await transactionApi.transactionSubmit({
-      transactionSubmitRequest: {
-        notarized_transaction_hex: notarizedTransactionHex,
-      }
-    })
-  
-    let retrieveTransactionId = await transaction.transactionId();
-    let transactionIdHash = Convert.Uint8Array.toHexString(retrieveTransactionId);
-    console.log(transactionIdHash)
-  
-    // // ************ Fetch component address from gateway api and set PackageAddress variable **************
-    let commitReceipt = await waitForCommitment(transactionIdHash);
-    console.log('Instantiate Committed Details Receipt', commitReceipt)
-}
-
-document.getElementById("setRoyalty").onclick = async function () {
-  let manifest = new ManifestBuilder()
-    .callMethod(
-      virtualAccountAddress,
-      "lock_fee",
-      [
-        new ManifestAstValue.Decimal(10)
-      ]
-    )
-    .setPackageRoyaltyConfig(
-      new ManifestAstValue.Address(
-        packageAddress
-      ),
-      new ManifestAstValue.Map(
-        ManifestAstValue.Kind.String,
-        ManifestAstValue.Kind.Tuple,
-        [
-          new ManifestAstValue.String("Radiswap"),
-          new ManifestAstValue.Tuple([
-            new ManifestAstValue.Map(
-              ManifestAstValue.Kind.String,
-              ManifestAstValue.Kind.U32,
-              [
-                new ManifestAstValue.String("instantiate_radiswap"),
-                new ManifestAstValue.EnumU8Discriminator(1)
-              ]
-            ),
-            new ManifestAstValue.EnumU8Discriminator(0)
-          ])
-        ]
-      )
-    )
-    .build();
-
-    let transaction = await TransactionBuilder.new().then(
-      (builder) =>
-        builder
-          .header(transactionHeader)
-          .manifest(manifest)
-          .sign(signer1PrivateKey)
-          .notarize(notaryPrivateKey)
-    );
-      
-    let notarizedTransactionUint8Array = await transaction.compile();
-    let notarizedTransactionHex = Convert.Uint8Array.toHexString(notarizedTransactionUint8Array);
-    console.log(notarizedTransactionHex)
-  
-    await transactionApi.transactionSubmit({
-      transactionSubmitRequest: {
-        notarized_transaction_hex: notarizedTransactionHex,
-      }
-    })
-  
-    let retrieveTransactionId = await transaction.transactionId();
-    let transactionIdHash = Convert.Uint8Array.toHexString(retrieveTransactionId);
-    console.log(transactionIdHash)
-  
-    // // ************ Fetch component address from gateway api and set PackageAddress variable **************
-    let commitReceipt = await waitForCommitment(transactionIdHash);
-    console.log('Instantiate Committed Details Receipt', commitReceipt)
-}
-
-document.getElementById("claimRoyalty").onclick = async function () {
-  let manifest = new ManifestBuilder()
-    .callMethod(
-      virtualAccountAddress,
-      "lock_fee",
-      [
-        new ManifestAstValue.Decimal(10)
-      ]
-    )
-    .claimPackageRoyalty(
-      packageAddress
-    )
-    .callMethod(
-      virtualAccountAddress,
-      "deposit_batch",
-      [
-        ManifestAstValue.Expression.entireWorktop()
-      ]
-    )
-    .build();
-
-    let transaction = await TransactionBuilder.new().then(
-      (builder) =>
-        builder
-          .header(transactionHeader)
-          .manifest(manifest)
-          .sign(signer1PrivateKey)
-          .notarize(notaryPrivateKey)
-    );
-      
-    let notarizedTransactionUint8Array = await transaction.compile();
-    let notarizedTransactionHex = Convert.Uint8Array.toHexString(notarizedTransactionUint8Array);
-    console.log(notarizedTransactionHex)
-  
-    await transactionApi.transactionSubmit({
-      transactionSubmitRequest: {
-        notarized_transaction_hex: notarizedTransactionHex,
-      }
-    })
-  
-    let retrieveTransactionId = await transaction.transactionId();
-    let transactionIdHash = Convert.Uint8Array.toHexString(retrieveTransactionId);
-    console.log(transactionIdHash)
-  
-    // // ************ Fetch component address from gateway api and set PackageAddress variable **************
-    let commitReceipt = await waitForCommitment(transactionIdHash);
-    console.log('Instantiate Committed Details Receipt', commitReceipt)
 }
 
 
-document.getElementById('createToken').onclick = async function () {
-  let tokenName = document.getElementById("tokenName").value;
-  let tokenSymbol = document.getElementById("tokenSymbol").value;
+
+document.getElementById('createToken')!.onclick = async function () {
+  let tokenName = (document.getElementById("tokenName") as HTMLInputElement).value;
+  let tokenSymbol = (document.getElementById("tokenSymbol") as HTMLInputElement).value;
 
   let manifest = new ManifestBuilder()
     .callMethod(
@@ -481,9 +330,9 @@ let commitReceipt = await waitForCommitment(transactionIdHash);
 console.log('Remove Liquidity Committed Details Receipt', commitReceipt)
 
 // Retrieve entity address
-document.getElementById('newTokenAddress').innerText = commitReceipt.details.referenced_global_entities[0];
+(document.getElementById('newTokenAddress') as HTMLElement).innerText = commitReceipt.details.referenced_global_entities[0];
 
-const createTokenTxLink = document.querySelector(".createTokenTx");
+const createTokenTxLink = document.querySelector(".createTokenTx") as HTMLAnchorElement;
 createTokenTxLink.href= `${txLink}${transactionIdHash}`;
 createTokenTxLink.style.display = "inline";
 
@@ -491,7 +340,7 @@ createTokenTxLink.style.display = "inline";
 
 // ************ Instantiate component and fetch component and resource addresses *************
 // This function is used to instantiate a Radiswap component which creates a two token liquidity pool
-document.getElementById('instantiateComponent').onclick = async function () {
+document.getElementById('instantiateComponent')!.onclick = async function () {
   // We first retrieve our global variables (tokenAAddress and tokenBAddress) to set its value so that we
   // can conveniently use the variable in other parts of our code. The value that will be saved to this 
   // variable will be the selected token resources that the user wishes to create this liquidity pool.
@@ -500,12 +349,12 @@ document.getElementById('instantiateComponent').onclick = async function () {
   // (tokenAAmount and tokenBAmount) to be used only once for this function. Likewise with our packageAddress
   // variable.
   // let packageAddress = document.getElementById("packageAddress").value;
-  tokenAAddress = document.getElementById("selectTokenA").value;
-  let tokenAAmount = document.getElementById("amountA").value;
-  tokenBAddress = document.getElementById("selectTokenB").value;
-  let tokenBAmount = document.getElementById("amountB").value;
-  swapFee = document.getElementById("swapFee").value;
-
+  tokenAAddress = (document.getElementById("selectTokenA") as HTMLSelectElement).value;
+  let tokenAAmount = (document.getElementById("amountA") as HTMLInputElement).value;
+  tokenBAddress = (document.getElementById("selectTokenB") as HTMLSelectElement).value;
+  let tokenBAmount = (document.getElementById("amountB") as HTMLInputElement).value;
+  swapFee = (document.getElementById("swapFee") as HTMLInputElement).value;
+  
   // We create a Transaction Manifest using the ManifestBuilder class conveniently provided  by the RadixEngineToolkit.
   // This Transaction Manifest has the following instructions:
   // 1. Withdraw the first selected token and amount out of the user's account based on the user's input.
@@ -594,13 +443,14 @@ document.getElementById('instantiateComponent').onclick = async function () {
 
   // ****** Set componentAddress variable with gateway api commitReciept payload ******
   componentAddress = commitReceipt.details.referenced_global_entities[0];
-  document.getElementById('componentAddress').innerText = truncateMiddle(componentAddress);
+  document.getElementById('componentAddress')!.innerText = truncateMiddle(componentAddress);
+
   
   // ****** Set resourceAddress variable with gateway api commitReciept payload ******
   poolUnitsAddress = commitReceipt.details.referenced_global_entities[2];
-  document.getElementById('poolUnitsAddress').innerText = truncateMiddle(poolUnitsAddress);
+  document.getElementById('poolUnitsAddress')!.innerText = truncateMiddle(poolUnitsAddress);
 
-  const instantiateComponentTxLink = document.querySelector(".instantiateComponentTx");
+  const instantiateComponentTxLink = document.querySelector(".instantiateComponentTx") as HTMLAnchorElement;
   instantiateComponentTxLink.href= `${txLink}${transactionIdHash}`;
   instantiateComponentTxLink.style.display = "inline";
   
@@ -608,10 +458,10 @@ document.getElementById('instantiateComponent').onclick = async function () {
   loadPoolInformation();
 }
 
-document.getElementById('swapToken').onclick = async function () {
-  let inputToken = document.getElementById("swapDropDown").value;
-  let inputAmount = document.getElementById("inputAmount").value;
-
+document.getElementById('swapToken')!.onclick = async function () {
+  let inputToken = (document.getElementById("swapDropDown") as HTMLInputElement).value;
+  let inputAmount = (document.getElementById("inputAmount") as HTMLInputElement).value;
+  
   let manifest = new ManifestBuilder()
     .callMethod(
       virtualAccountAddress,
@@ -675,17 +525,17 @@ document.getElementById('swapToken').onclick = async function () {
   let commitReceipt = await waitForCommitment(transactionIdHash);
   console.log('Swap Committed Details Receipt', commitReceipt)
 
-  const swapTxLink = document.querySelector(".swapTx");
+  const swapTxLink = document.querySelector(".swapTx") as HTMLAnchorElement;
   swapTxLink.href= `${txLink}${transactionIdHash}`;
   swapTxLink.style.display = "inline";
 
   loadPoolInformation();
 }
 
-document.getElementById('getAmount').onclick = async function () {
-  let requestedToken = document.getElementById("exactSwapDropDown").value;
-  let requestedAmount = document.getElementById("requestedAmount").value;
-
+document.getElementById('getAmount')!.onclick = async function () {
+  const requestedToken = (document.getElementById("exactSwapDropDown") as HTMLInputElement).value;
+  const requestedAmount: number = parseInt((document.getElementById("requestedAmount") as HTMLInputElement).value);
+  
   // Sorting logic
   let [inputTokenAddress, outputTokenAddress] = requestedToken === tokenAAddress
     ? [tokenBAddress, tokenAAddress]
@@ -708,19 +558,23 @@ document.getElementById('getAmount').onclick = async function () {
   ]);
 
   const { amount: x } = inputTokenRequest.items[0];
+  const xNumber = Number(x);
   const { amount: y } = outputTokenRequest.items[0];
-  const dy = requestedAmount;
+  const yNumber = Number(y)
+  const dy: number = requestedAmount;
   const r = (1 - swapFee) / 1;
-  const dx = (dy * x) / (r * (y - dy));
+  const dx = (dy * xNumber) / (r * (yNumber - dy));
 
-  document.getElementById('requiredResource').innerText = await retrieveTokenSymbol(inputTokenAddress) + " - " + truncateMiddle(inputTokenAddress);
-  document.getElementById('requiredResource').dataset.address = inputTokenAddress;
-  document.getElementById('requiredAmount').innerText = dx;
+  document.getElementById('requiredResource')!.innerText = await retrieveTokenSymbol(inputTokenAddress) + " - " + truncateMiddle(inputTokenAddress);
+  document.getElementById('requiredResource')!.dataset.address = inputTokenAddress;
+  document.getElementById('requiredAmount')!.innerText = dx.toString();
 }
 
-document.getElementById('exactSwapToken').onclick = async function () {
-  let requiredResource = document.getElementById('requiredResource').dataset.address;
-  let requiredAmount = document.getElementById("requiredAmount").innerHTML;  
+
+document.getElementById('exactSwapToken')!.onclick = async function () {
+  let requiredResource = (document.getElementById('requiredResource') as HTMLDivElement).dataset.address!;
+  let requiredAmount = parseInt((document.getElementById("requiredAmount") as HTMLDivElement).innerHTML);
+  
 
   let manifest = new ManifestBuilder()
     .callMethod(
@@ -797,17 +651,17 @@ document.getElementById('exactSwapToken').onclick = async function () {
   let commitReceipt = await waitForCommitment(transactionIdHash);
   console.log('Exact Swap Committed Details Receipt', commitReceipt)
 
-  const exactSwapTxLink = document.querySelector(".exactSwapTx");
+  const exactSwapTxLink = document.querySelector(".exactSwapTx") as HTMLAnchorElement;
   exactSwapTxLink.href= `${txLink}${transactionIdHash}`;
   exactSwapTxLink.style.display = "inline";
 
   loadPoolInformation();
 }
 
-document.getElementById('addLiquidity').onclick = async function () {
-  let tokenAAmount = document.getElementById("tokenAAmount").value;
-  let tokenBAmount = document.getElementById("tokenBAmount").value;
-
+document.getElementById('addLiquidity')!.onclick = async function () {
+  let tokenAAmount = (document.getElementById("tokenAAmount") as HTMLInputElement).value;
+  let tokenBAmount = (document.getElementById("tokenBAmount") as HTMLInputElement).value;
+  
   let manifest = new ManifestBuilder()
     .callMethod(
       virtualAccountAddress,
@@ -885,15 +739,15 @@ document.getElementById('addLiquidity').onclick = async function () {
 
     console.log('Add Liquidity Committed Details Receipt', commitReceipt)
   
-    const addLiquidityTxLink = document.querySelector(".addLiquidityTx");
+    const addLiquidityTxLink = document.querySelector(".addLiquidityTx") as HTMLAnchorElement;
     addLiquidityTxLink.href= `${txLink}${transactionIdHash}`;
     addLiquidityTxLink.style.display = "inline";
 
     loadPoolInformation();
 }
 
-document.getElementById('removeLiquidity').onclick = async function () {
-  let poolUnitsAmount = document.getElementById("poolUnitsAmount").data;
+document.getElementById('removeLiquidity')!.onclick = async function () {
+  let poolUnitsAmount = (document.getElementById("poolUnitsAmount") as HTMLElement).getAttribute('data');
 
   let manifest = new ManifestBuilder()
     .callMethod(
@@ -957,7 +811,7 @@ document.getElementById('removeLiquidity').onclick = async function () {
     let commitReceipt = await waitForCommitment(transactionIdHash);
     console.log('Remove Liquidity Committed Details Receipt', commitReceipt)
   
-    const removeLiquidityTxLink = document.querySelector(".removeLiquidityTx");
+    const removeLiquidityTxLink = document.querySelector(".removeLiquidityTx") as HTMLAnchorElement;
     removeLiquidityTxLink.href= `${txLink}${transactionIdHash}`;
     removeLiquidityTxLink.style.display = "inline";
 
@@ -974,7 +828,7 @@ window.onload = async function fetchData() {
   });
 
   const fungibles = account.fungible_resources?.items ?? [];
-  fungibles_metadata = await Promise.all(fungibles.map(async (fungible) => {
+  const fungibles_metadata = await Promise.all(fungibles.map(async (fungible) => {
     const { resource_address: resourceAddress } = fungible;
     const metadata = await stateApi.entityMetadataPage({
       stateEntityMetadataPageRequest: { address: resourceAddress }
@@ -987,19 +841,44 @@ window.onload = async function fetchData() {
   }));
 
   const select = document.createElement("select");
-  const [selectTokenA, selectTokenB] = document.querySelectorAll("#selectTokenA, #selectTokenB");
+  const [selectTokenA, selectTokenB] = document.querySelectorAll<HTMLSelectElement>("#selectTokenA, #selectTokenB");
 
   for (const { metadata, resource_address: resourceAddress } of fungibles_metadata) {
-    const option = new Option(`${metadata} - ${truncateMiddle(resourceAddress)}`, resourceAddress);
+    const option: HTMLOptionElement = new Option(`${metadata} - ${truncateMiddle(resourceAddress)}`, resourceAddress);
     select.add(option);
-    selectTokenA.add(option.cloneNode(true));
-    selectTokenB.add(option.cloneNode(true));
+    selectTokenA.add(option.cloneNode(true) as HTMLOptionElement);
+    selectTokenB.add(option.cloneNode(true) as HTMLOptionElement);
   }
 
-  document.getElementById("accountAddress").innerText = truncateMiddle(virtualAccountAddress);
+  const accountAddress = document.getElementById("accountAddress")!;
+  accountAddress.innerText = truncateMiddle(virtualAccountAddress);
 };
 
+
 async function loadPoolInformation() {
+  // Get fungibles metadata
+  const { items: [account] } = await stateApi.stateEntityDetails({
+    stateEntityDetailsRequest: {
+      addresses: [componentAddress],
+    },
+  });
+  const fungibles = account.fungible_resources?.items ?? [];
+  const fungibles_metadata = await Promise.all(fungibles.map(async (fungible) => {
+    const { resource_address: resourceAddress } = fungible;
+    const metadata = await stateApi.entityMetadataPage({
+      stateEntityMetadataPageRequest: { address: resourceAddress }
+    }).catch(() => null);
+    return {
+      metadata: metadata?.items[1]?.value.as_string ?? "N/A",
+      resource_address: resourceAddress
+    };
+  }));
+
+  if (fungibles_metadata.length === 0) {
+    console.error("No fungibles metadata found.");
+    return;
+  }
+
   const [tokenARequest, tokenBRequest] = await Promise.all([
     stateApi.entityFungibleResourceVaultPage({
       stateEntityFungibleResourceVaultsPageRequest: {
@@ -1019,24 +898,27 @@ async function loadPoolInformation() {
   const tokenPair = `${fungibles_metadata[0].metadata} - ${truncateMiddle(fungibles_metadata[0].resource_address)}/${fungibles_metadata[1].metadata} - ${truncateMiddle(fungibles_metadata[1].resource_address)}`;
   const liquidity = `${tokenA.amount}/${tokenB.amount}`;
 
-  document.getElementById("tokenPair").innerText = tokenPair;
-  document.getElementById("liquidity").innerText = liquidity;
+  document.getElementById("tokenPair")!.innerText = tokenPair;
+  document.getElementById("liquidity")!.innerText = liquidity;
 }
+
+
 
 // Retrieves TokenPair
 async function loadTokenPair() {
   const select = document.createElement("select");
-  const swapDropDown = document.getElementById("swapDropDown");
-  const exactSwapDropDown = document.getElementById("exactSwapDropDown");
+  const swapDropDown = document.getElementById("swapDropDown") as HTMLElement;
+  const exactSwapDropDown = document.getElementById("exactSwapDropDown") as HTMLElement;
 
-  for (const val of fungibles_metadata.filter(val => val.resource_address === tokenAAddress || val.resource_address === tokenBAddress)) {
+  for (const val of fungibles_metadata.filter((val) => val.resource_address === tokenAAddress || val.resource_address === tokenBAddress)) {
     const option = new Option(`${val.metadata} - ${truncateMiddle(val.resource_address)}`, val.resource_address);
     select.add(option);
-    swapDropDown.add(option.cloneNode(true));
-    exactSwapDropDown.add(option.cloneNode(true));
-    document.getElementById(`token${val.resource_address === tokenAAddress ? 'A' : 'B'}Address`).innerText = `${val.metadata} - ${truncateMiddle(val.resource_address)}`;
+    swapDropDown.appendChild(option.cloneNode(true) as Node);
+    exactSwapDropDown.appendChild(option.cloneNode(true) as Node);
+    document.getElementById(`token${val.resource_address === tokenAAddress ? 'A' : 'B'}Address`)!.innerText = `${val.metadata} - ${truncateMiddle(val.resource_address)}`;
   }
 }
+
 
 async function waitForCommitment(transactionIdHash) {
   let commitReceipt;
@@ -1059,16 +941,21 @@ async function waitForCommitment(transactionIdHash) {
   return commitReceipt;
 }
 
-function loadFile(file) {
+function loadFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const arrayBuffer = event.target.result;
-      const uint8Array = new Uint8Array(arrayBuffer);
-      resolve(uint8Array);
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === "string") {
+        resolve(result);
+      } else {
+        reject(new Error("Failed to load file"));
+      }
     };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(file);
+    reader.onerror = () => {
+      reject(new Error("Failed to load file"));
+    };
+    reader.readAsText(file);
   });
 }
 
@@ -1093,11 +980,11 @@ async function retrieveTokenSymbol(resourceAddress) {
   return metadata?.items[1]?.value.as_string ?? "N/A";
 }
 
-async function retrieveCurrentEpoch() {
-  const retrieveStatus = await statusApi.gatewayStatus({
-  })
+// async function retrieveCurrentEpoch() {
+//   const retrieveStatus = await statusApi.gatewayStatus({
+//   })
 
-  let currentEpoch = currentEpoch.ledger_state.epoch;
-  return currentEpoch;
-}
+//   let currentEpoch = currentEpoch.ledger_state.epoch;
+//   return currentEpoch;
+// }
 
