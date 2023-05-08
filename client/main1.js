@@ -8,19 +8,6 @@ import {
   ManifestBuilder, 
   ManifestAstValue, 
   InstructionList, 
-  // Transactions
-  NotarizedTransaction,
-  PrivateKey,
-  TransactionBuilder,
-  TransactionHeader,
-  TransactionManifest,
-  ValidationConfig,
-  generateRandomNonce,
-  Convert,
-  TransactionIntent,
-  SignedTransactionIntent,
-  RadixEngineToolkit,
-  PublicKey,
 } from '@radixdlt/radix-engine-toolkit'
 
 
@@ -278,10 +265,10 @@ document.getElementById('instantiateComponent').onclick = async function () {
   // ****** Set componentAddress variable with gateway api commitReciept payload ******
   componentAddress = commitReceipt.details.referenced_global_entities[0];
   document.getElementById('componentAddress').innerText = truncateMiddle(componentAddress);
-  componentAddressList.push(componentAddress);
+
   // ****** Set resourceAddress variable with gateway api commitReciept payload ******
-  poolUnitsAddress = truncateMiddle(commitReceipt.details.referenced_global_entities[2]);
-  document.getElementById('poolUnitsAddress').innerText = poolUnitsAddress;
+  poolUnitsAddress = commitReceipt.details.referenced_global_entities[2];
+  document.getElementById('poolUnitsAddress').innerText = truncateMiddle(poolUnitsAddress);
 
   const createTokenTxLink = document.querySelector(".instantiateComponentTx");
   let tx = txLink + commitReceipt.transaction.intent_hash_hex;
@@ -378,50 +365,36 @@ document.getElementById('getAmount').onclick = async function () {
   let requestedToken = document.getElementById("exactSwapDropDown").value;
   let requestedAmount = document.getElementById("requestedAmount").value;
 
-  console.log(componentAddress)
-
-    // Sorting logic
-    let inputTokenAddress, outputTokenAddress;
-    if (requestedToken === tokenAAddress ) {
-      inputTokenAddress = tokenBAddress; 
-      outputTokenAddress = tokenAAddress;
-    } else {
-      inputTokenAddress = tokenAAddress;
-      outputTokenAddress = tokenBAddress; 
-    };
-
-    console.log(inputTokenAddress)
+  // Sorting logic
+  let [inputTokenAddress, outputTokenAddress] = requestedToken === tokenAAddress
+    ? [tokenBAddress, tokenAAddress]
+    : [tokenAAddress, tokenBAddress];
 
   // Making request to gateway
-  let inputTokenRequest = await stateApi.entityFungibleResourceVaultPage(
-    {
+  const [inputTokenRequest, outputTokenRequest] = await Promise.all([
+    stateApi.entityFungibleResourceVaultPage({
       stateEntityFungibleResourceVaultsPageRequest: {
         address: componentAddress,
         resource_address: inputTokenAddress,
       }
-    });
-  
-  console.log("Token A Request: ", inputTokenRequest);
-
-  let outputTokenRequest = await stateApi.entityFungibleResourceVaultPage(
-    {
+    }),
+    stateApi.entityFungibleResourceVaultPage({
       stateEntityFungibleResourceVaultsPageRequest: {
         address: componentAddress,
         resource_address: outputTokenAddress,
       }
-    });
+    })
+  ]);
 
-  console.log("Token B Request: ", outputTokenRequest);
+  const { amount: x } = inputTokenRequest.items[0];
+  const { amount: y } = outputTokenRequest.items[0];
+  const dy = requestedAmount;
+  const r = (1 - swapFee) / 1;
+  const dx = (dy * x) / (r * (y - dy));
 
-
-  let x = inputTokenRequest.items[0].amount;
-  let y = outputTokenRequest.items[0].amount;
-  let dy = requestedAmount;
-  let r = (1 - swapFee) / 1;
-  let dx = (dy * x) / (r * (y - dy));
-
-  document.getElementById('requiredResource').innerText = inputTokenAddress
-  document.getElementById('requiredAmount').innerText = dx 
+  document.getElementById('requiredResource').innerText = await retrieveTokenSymbol(inputTokenAddress) + " - " + truncateMiddle(inputTokenAddress);
+  document.getElementById('requiredResource').dataset.address = inputTokenAddress;
+  document.getElementById('requiredAmount').innerText = dx;
 }
 
 document.getElementById('exactSwapToken').onclick = async function () {
@@ -671,135 +644,76 @@ document.getElementById('removeLiquidity').onclick = async function () {
 
 // ****** EXTRA ******
 window.onload = async function fetchData() {
-  var fungibles = [];
-
   // Getway Request //
-  let accountState = await stateApi.stateEntityDetails({
+  const { items: [account] } = await stateApi.stateEntityDetails({
     stateEntityDetailsRequest: {
-      addresses: [accountAddress]
+      addresses: [virtualAccountAddress]
     }
-  })
-  
-  accountState.items[0].fungible_resources?.items.forEach(item => fungibles.push(item))
-  //
-  
-  let i = 0;
+  });
 
-  while (i < fungibles.length) {
+  const fungibles = account.fungible_resources?.items ?? [];
+  fungibles_metadata = await Promise.all(fungibles.map(async (fungible) => {
+    const { resource_address: resourceAddress } = fungible;
+    const metadata = await stateApi.entityMetadataPage({
+      stateEntityMetadataPageRequest: { address: resourceAddress }
+    }).catch(() => null);
 
-    let fungible_object = {};
+    return {
+      metadata: metadata?.items[1]?.value.as_string ?? "N/A",
+      resource_address: resourceAddress
+    };
+  }));
 
-    let fungible_string = fungibles[i].resource_address;
+  const select = document.createElement("select");
+  const [selectTokenA, selectTokenB] = document.querySelectorAll("#selectTokenA, #selectTokenB");
 
-    try {
-      let metadata = await stateApi.entityMetadataPage({
-        stateEntityMetadataPageRequest: {
-          address: fungible_string
-        }
-      })
-
-      if (metadata.items[1]) {
-
-        let metadataValue = metadata.items[1].value.as_string;
-
-        fungible_object.metadata = metadataValue;
-
-      } else {
-        fungible_object.metadata = "N/A";
-      }
-      fungible_object.resource_address = fungible_string;
-    } catch (error) {
-      console.log(`Error retrieving metadata for ${fungible_string}: ${error}`);
-
-      fungible_object.metadata = "N/A";
-      fungible_object.resource_address = fungibles[i].resource_address;
-    }
-    fungibles_metadata.push(fungible_object);
-    i++;
+  for (const { metadata, resource_address: resourceAddress } of fungibles_metadata) {
+    const option = new Option(`${metadata} - ${truncateMiddle(resourceAddress)}`, resourceAddress);
+    select.add(option);
+    selectTokenA.add(option.cloneNode(true));
+    selectTokenB.add(option.cloneNode(true));
   }
-  
-  var select = document.createElement("select");
 
-  var selectTokenA = document.getElementById("selectTokenA");
-  var selectTokenB = document.getElementById("selectTokenB");
-
-  for (const val of fungibles_metadata)
-  {
-      var option = document.createElement("option");
-      option.value = val.resource_address;
-      option.text =  val.metadata + " - " + truncateMiddle(val.resource_address);
-      select.appendChild(option);
-      selectTokenA.appendChild(option.cloneNode(true));
-      selectTokenB.appendChild(option.cloneNode(true));
-  }
-}
+  document.getElementById("accountAddress").innerText = truncateMiddle(virtualAccountAddress);
+};
 
 async function loadPoolInformation() {
-  document.getElementById("tokenPair").innerText = 
-    fungibles_metadata[0].metadata + " - " + truncateMiddle(fungibles_metadata[0].resource_address) 
-    + "/" + 
-    fungibles_metadata[1].metadata + " - " + truncateMiddle(fungibles_metadata[0].resource_address);
+  const [tokenARequest, tokenBRequest] = await Promise.all([
+    stateApi.entityFungibleResourceVaultPage({
+      stateEntityFungibleResourceVaultsPageRequest: {
+        address: componentAddress,
+        resource_address: tokenAAddress,
+      },
+    }),
+    stateApi.entityFungibleResourceVaultPage({
+      stateEntityFungibleResourceVaultsPageRequest: {
+        address: componentAddress,
+        resource_address: tokenBAddress,
+      },
+    }),
+  ]);
 
-  let tokenARequest = await stateApi.entityFungibleResourceVaultPage({
-    stateEntityFungibleResourceVaultsPageRequest: {
-      address: componentAddress,
-      resource_address: tokenAAddress,
-    }
-  })
+  const [tokenA, tokenB] = [tokenARequest.items[0], tokenBRequest.items[0]];
+  const tokenPair = `${fungibles_metadata[0].metadata} - ${truncateMiddle(fungibles_metadata[0].resource_address)}/${fungibles_metadata[1].metadata} - ${truncateMiddle(fungibles_metadata[1].resource_address)}`;
+  const liquidity = `${tokenA.amount}/${tokenB.amount}`;
 
-  let tokenBRequest = await stateApi.entityFungibleResourceVaultPage({
-    stateEntityFungibleResourceVaultsPageRequest: {
-      address: componentAddress,
-      resource_address: tokenBAddress,
-    }
-  })
-
-  document.getElementById("liquidity").innerText = 
-    tokenARequest.items[0].amount + 
-    "/" + 
-    tokenBRequest.items[0].amount;
+  document.getElementById("tokenPair").innerText = tokenPair;
+  document.getElementById("liquidity").innerText = liquidity;
 }
 
 // Retrieves TokenPair
 async function loadTokenPair() {
+  const select = document.createElement("select");
+  const swapDropDown = document.getElementById("swapDropDown");
+  const exactSwapDropDown = document.getElementById("exactSwapDropDown");
 
-  var select = document.createElement("select");
-
-  var swapDropDown = document.getElementById("swapDropDown");
-  var exactSwapDropDown = document.getElementById("exactSwapDropDown");
-
-  for (const val of fungibles_metadata)
-  {
-    if (val.resource_address === tokenAAddress || val.resource_address === tokenBAddress) {
-      var option = document.createElement("option");
-      option.value = val.resource_address;
-      option.text =  val.metadata + " - " + truncateMiddle(val.resource_address);
-      select.appendChild(option);
-      swapDropDown.appendChild(option.cloneNode(true));
-      exactSwapDropDown.appendChild(option.cloneNode(true));
-      if (val.resource_address === tokenAAddress) {
-        document.getElementById("tokenAAddress").innerText = val.metadata + " - " + truncateMiddle(val.resource_address);
-      } else if (val.resource_address === tokenBAddress) {
-        document.getElementById("tokenBAddress").innerText = val.metadata + " - " + truncateMiddle(val.resource_address);
-      }
-    }
+  for (const val of fungibles_metadata.filter(val => val.resource_address === tokenAAddress || val.resource_address === tokenBAddress)) {
+    const option = new Option(`${val.metadata} - ${truncateMiddle(val.resource_address)}`, val.resource_address);
+    select.add(option);
+    swapDropDown.add(option.cloneNode(true));
+    exactSwapDropDown.add(option.cloneNode(true));
+    document.getElementById(`token${val.resource_address === tokenAAddress ? 'A' : 'B'}Address`).innerText = `${val.metadata} - ${truncateMiddle(val.resource_address)}`;
   }
-}
-
-async function loadPools() {
-
-  var select = document.createElement("select");
-
-  var componentAddressDropDown = document.getElementById("componentAddressDropDown");
-
-  for (const val of componentAddressList)
-  {
-    var option = document.createElement("option");
-    option.value = val;
-    option.text =  truncateMiddle(val);
-    select.appendChild(option);
-  }
-  componentAddressDropDown.appendChild(select);
 }
 
 function truncateMiddle(str) {

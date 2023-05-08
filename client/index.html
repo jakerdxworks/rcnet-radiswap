@@ -28,6 +28,10 @@
 
 <h2>Get RCnet Tokens</h2>
 <p><button id="getRcnetTokens">Get RCnet Tokens</button></p>
+<p>
+  <pre><a class="getRcnetTokenTx" href="#" target="_blank" style="display: none;">View transaction</a></pre>
+</p> 
+  
 
 <h2>Deploy Package</h2>
 <input type="file" id="fileWasm">
@@ -39,6 +43,8 @@
 <p>
 <pre><a class="deployPackageTx" href="#" target="_blank" style="display: none;">View transaction</a></pre>
 </p> 
+
+<h2></h2>
 
 
 <h2>Create Token</h2>
@@ -79,7 +85,6 @@
 </div>
 
 <h2>Swap</h2>
-<div><select id="componentAddressDropDown"></select></div>
 <div><select id="swapDropDown"></select></div>
 <input type="text" placeholder="Amount" id="inputAmount" />
 <p><button id="swapToken">Swap Tokens</button></p>
@@ -95,7 +100,7 @@
 <button id="getAmount">Get Required Amount</button>
 <div class="container">
   <p>Required Resource:<br>
-  <pre id="requiredResource"></pre>
+  <pre id="requiredResource" data-address=""></pre>
     Required Amount:<br>
   <pre id="requiredAmount"></pre>
   </p>
