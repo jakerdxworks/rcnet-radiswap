@@ -1,5 +1,0 @@
-/Users/jakemai/Documents/GitHub/create-scrypto-dapp/scrypto/target/debug/build/wabt-sys-3c511f34431b6dca/out/build/CMakeFiles/everything.dir
-/Users/jakemai/Documents/GitHub/create-scrypto-dapp/scrypto/target/debug/build/wabt-sys-3c511f34431b6dca/out/build/CMakeFiles/wabt.dir
-/Users/jakemai/Documents/GitHub/create-scrypto-dapp/scrypto/target/debug/build/wabt-sys-3c511f34431b6dca/out/build/CMakeFiles/wasm.dir
-/Users/jakemai/Documents/GitHub/create-scrypto-dapp/scrypto/target/debug/build/wabt-sys-3c511f34431b6dca/out/build/CMakeFiles/edit_cache.dir
-/Users/jakemai/Documents/GitHub/create-scrypto-dapp/scrypto/target/debug/build/wabt-sys-3c511f34431b6dca/out/build/CMakeFiles/rebuild_cache.dir
